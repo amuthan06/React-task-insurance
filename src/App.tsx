@@ -1,10 +1,26 @@
-import { Button } from '@/components/ui/button'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import Signup from './pages/Signup'
+import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   return (
-    <div className="bg-blue-500 text-white p-4">
-      <Button>Click me</Button>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   )
 }
+
 export default App

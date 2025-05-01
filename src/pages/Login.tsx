@@ -1,66 +1,61 @@
-import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { useNavigate, Link } from 'react-router-dom';
 
-function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const navigate = useNavigate()
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    e.preventDefault();
+    setError(null);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setError(error.message)
+      setError(error.message);
     } else {
-      navigate('/')
+      navigate('/dashboard');
     }
-  }
+  };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="flex justify-center items-center h-screen bg-gray-100">
       <div className="p-6 bg-white rounded shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-4">Login</h2>
-        <form onSubmit={handleLogin}>
-          <div className="mb-4">
-            <Input
+        <h2 className="text-2xl mb-4 text-center">Login</h2>
+        {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block mb-1">Email</label>
+            <input
               type="email"
-              placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="border p-2 w-full rounded"
               required
             />
           </div>
-          <div className="mb-4">
-            <Input
+          <div>
+            <label className="block mb-1">Password</label>
+            <input
               type="password"
-              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="border p-2 w-full rounded"
               required
             />
           </div>
-          {error && <p className="text-red-500 mb-4">{error}</p>}
-          <Button type="submit" className="w-full">
+          <button type="submit" className="bg-blue-500 text-white p-2 rounded w-full">
             Login
-          </Button>
+          </button>
         </form>
         <p className="mt-4 text-center">
           Don't have an account?{' '}
-          <a href="/signup" className="text-blue-500">
-            Sign up
-          </a>
+          <Link to="/signup" className="text-blue-500 hover:underline">
+            Sign Up
+          </Link>
         </p>
       </div>
     </div>
-  )
+  );
 }
-
-export default Login

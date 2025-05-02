@@ -17,7 +17,9 @@ export default function ResetPasswordRequest() {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: 'http://localhost:5173/reset-password',
       })
-      if (error) {throw error}
+      if (error) {
+        throw error
+      }
       setMessage('Password reset email sent! Check your inbox.')
     } catch (error) {
       const errorMessage =
@@ -32,10 +34,11 @@ export default function ResetPasswordRequest() {
         <h2 className="text-2xl font-bold mb-4 text-center">Reset Password</h2>
         <form onSubmit={handleResetPasswordRequest} className="space-y-4">
           <div>
-            <label className="block mb-1">
+            <label htmlFor="email" className="block mb-1">
               Email <span className="text-red-500">*</span>
             </label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -55,6 +58,7 @@ export default function ResetPasswordRequest() {
         <p className="mt-4 text-center">
           Remember your password?{' '}
           <button
+            type="button"
             onClick={() => navigate('/login')}
             className="text-blue-500 hover:underline"
           >

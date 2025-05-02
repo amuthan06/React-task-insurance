@@ -1,10 +1,10 @@
 import {
-  PieChart,
-  Pie,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
   Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
 } from 'recharts'
 
 interface PolicyDistributionByRegionChartProps {
@@ -40,7 +40,9 @@ const PolicyDistributionByRegionChart = ({
       const policyholder = policyholders.find(
         (ph) => ph.id === policy.policyholder_id
       )
-      if (!policyholder) {return acc}
+      if (!policyholder) {
+        return acc
+      }
 
       let entry = acc.find((item) => item.region === policyholder.region)
       if (!entry) {
@@ -83,9 +85,9 @@ const PolicyDistributionByRegionChart = ({
             outerRadius={80}
             label
           >
-            {finalData.map((entry, index) => (
+            {finalData.map((entry) => (
               <Cell
-                key={`cell-${index}`}
+                key={entry.region} // Use region as key instead of index
                 fill={COLORS[entry.region] || '#8884d8'}
               />
             ))}

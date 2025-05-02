@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -26,7 +26,9 @@ export default function ResetPassword() {
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       })
-      if (error) {throw error}
+      if (error) {
+        throw error
+      }
       setMessage('Password updated successfully! Redirecting to login...')
       setTimeout(() => navigate('/login'), 2000)
     } catch (error) {
@@ -44,10 +46,11 @@ export default function ResetPassword() {
         </h2>
         <form onSubmit={handleResetPassword} className="space-y-4">
           <div>
-            <label className="block mb-1">
+            <label htmlFor="new-password" className="block mb-1">
               New Password <span className="text-red-500">*</span>
             </label>
             <input
+              id="new-password"
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}

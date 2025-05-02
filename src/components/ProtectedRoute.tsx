@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 
 interface ProtectedRouteProps {

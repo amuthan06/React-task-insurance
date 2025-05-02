@@ -1,21 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { fetchPolicyholders } from '../features/policyholders/policyholdersSlice'
-import {
-  fetchPolicies,
-  createPolicy,
-  updatePolicyThunk,
-  deletePolicy,
-} from '../features/policies/policiesSlice'
-import { RootState, AppDispatch } from '../store'
-import { supabase } from '../lib/supabase'
-import PolicyholdersBasedOnRegionChart from '../components/PolicyholdersBasedOnRegionChart'
-import PolicyCountByTypeAndStatusChart from '../components/PolicyCountByTypeAndStatusChart'
 import CoverageOverTimeChart from '../components/CoverageOverTimeChart'
+import PolicyCountByTypeAndStatusChart from '../components/PolicyCountByTypeAndStatusChart'
 import PolicyDistributionByRegionChart from '../components/PolicyDistributionByRegionChart'
-import { Policy } from '../features/policies/policiesSlice'
+import PolicyholdersBasedOnRegionChart from '../components/PolicyholdersBasedOnRegionChart'
 import { Button } from '../components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Input } from '../components/ui/input'
 import {
   Select,
   SelectContent,
@@ -23,8 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select'
-import { Input } from '../components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import {
   Table,
   TableBody,
@@ -33,6 +23,16 @@ import {
   TableHeader,
   TableRow,
 } from '../components/ui/table'
+import {
+  createPolicy,
+  deletePolicy,
+  fetchPolicies,
+  updatePolicyThunk,
+} from '../features/policies/policiesSlice'
+import type { Policy } from '../features/policies/policiesSlice'
+import { fetchPolicyholders } from '../features/policyholders/policyholdersSlice'
+import { supabase } from '../lib/supabase'
+import type { AppDispatch, RootState } from '../store'
 
 export default function Dashboard() {
   const dispatch = useDispatch<AppDispatch>()
@@ -154,7 +154,9 @@ export default function Dashboard() {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) {return}
+    if (!user) {
+      return
+    }
     if (region === 'none') {
       alert('Please select a region.')
       return
@@ -187,7 +189,7 @@ export default function Dashboard() {
         createPolicy({
           number: policyNumber,
           type: policyType,
-          coverage: parseInt(coverage),
+          coverage: Number.parseInt(coverage),
           start_date: startDate,
           end_date: endDate,
           status,
@@ -223,7 +225,9 @@ export default function Dashboard() {
   const handleUpdatePolicy = async (e: React.FormEvent) => {
     e.preventDefault()
     setPolicyError(null)
-    if (!editingPolicyId) {return}
+    if (!editingPolicyId) {
+      return
+    }
     if (selectedPolicyholderId === 'none') {
       setPolicyError('Please select a policyholder.')
       return
@@ -235,7 +239,7 @@ export default function Dashboard() {
           policy: {
             number: policyNumber,
             type: policyType,
-            coverage: parseInt(coverage),
+            coverage: Number.parseInt(coverage),
             start_date: startDate,
             end_date: endDate,
             status,
@@ -313,11 +317,14 @@ export default function Dashboard() {
         <CardContent>
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block mb-1 text-sm font-medium">
+              <label
+                htmlFor="status-filter"
+                className="block mb-1 text-sm font-medium"
+              >
                 Policy Status
               </label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger id="status-filter">
                   <SelectValue placeholder="Select Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -329,9 +336,14 @@ export default function Dashboard() {
               </Select>
             </div>
             <div>
-              <label className="block mb-1 text-sm font-medium">Region</label>
+              <label
+                htmlFor="region-filter"
+                className="block mb-1 text-sm font-medium"
+              >
+                Region
+              </label>
               <Select value={regionFilter} onValueChange={setRegionFilter}>
-                <SelectTrigger>
+                <SelectTrigger id="region-filter">
                   <SelectValue placeholder="Select Region" />
                 </SelectTrigger>
                 <SelectContent>
@@ -344,24 +356,34 @@ export default function Dashboard() {
               </Select>
             </div>
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                Date Range
-              </label>
+              <p className="block mb-1 text-sm font-medium">Date Range</p>
               <div className="flex space-x-2">
-                <Input
-                  type="date"
-                  value={dateRange.start}
-                  onChange={(e) =>
-                    setDateRange({ ...dateRange, start: e.target.value })
-                  }
-                />
-                <Input
-                  type="date"
-                  value={dateRange.end}
-                  onChange={(e) =>
-                    setDateRange({ ...dateRange, end: e.target.value })
-                  }
-                />
+                <div>
+                  <label htmlFor="date-start" className="sr-only">
+                    Start Date
+                  </label>
+                  <Input
+                    id="date-start"
+                    type="date"
+                    value={dateRange.start}
+                    onChange={(e) =>
+                      setDateRange({ ...dateRange, start: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label htmlFor="date-end" className="sr-only">
+                    End Date
+                  </label>
+                  <Input
+                    id="date-end"
+                    type="date"
+                    value={dateRange.end}
+                    onChange={(e) =>
+                      setDateRange({ ...dateRange, end: e.target.value })
+                    }
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -404,10 +426,14 @@ export default function Dashboard() {
               <form onSubmit={handleAddPolicyholder} className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block mb-1 text-sm font-medium">
+                    <label
+                      htmlFor="name"
+                      className="block mb-1 text-sm font-medium"
+                    >
                       Name <span className="text-red-500">*</span>
                     </label>
                     <Input
+                      id="name"
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
@@ -415,10 +441,14 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">
+                    <label
+                      htmlFor="contact"
+                      className="block mb-1 text-sm font-medium"
+                    >
                       Contact <span className="text-red-500">*</span>
                     </label>
                     <Input
+                      id="contact"
                       type="text"
                       value={contact}
                       onChange={(e) => setContact(e.target.value)}
@@ -426,11 +456,14 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">
+                    <label
+                      htmlFor="region"
+                      className="block mb-1 text-sm font-medium"
+                    >
                       Region <span className="text-red-500">*</span>
                     </label>
                     <Select value={region} onValueChange={setRegion}>
-                      <SelectTrigger>
+                      <SelectTrigger id="region">
                         <SelectValue placeholder="Select Region" />
                       </SelectTrigger>
                       <SelectContent>
@@ -461,14 +494,17 @@ export default function Dashboard() {
               >
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block mb-1 text-sm font-medium">
+                    <label
+                      htmlFor="policyholder"
+                      className="block mb-1 text-sm font-medium"
+                    >
                       Policyholder <span className="text-red-500">*</span>
                     </label>
                     <Select
                       value={selectedPolicyholderId}
                       onValueChange={setSelectedPolicyholderId}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="policyholder">
                         <SelectValue placeholder="Select Policyholder" />
                       </SelectTrigger>
                       <SelectContent>
@@ -484,10 +520,14 @@ export default function Dashboard() {
                     </Select>
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">
+                    <label
+                      htmlFor="policy-number"
+                      className="block mb-1 text-sm font-medium"
+                    >
                       Policy Number <span className="text-red-500">*</span>
                     </label>
                     <Input
+                      id="policy-number"
                       type="text"
                       value={policyNumber}
                       onChange={(e) => setPolicyNumber(e.target.value)}
@@ -495,10 +535,14 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">
+                    <label
+                      htmlFor="policy-type"
+                      className="block mb-1 text-sm font-medium"
+                    >
                       Type <span className="text-red-500">*</span>
                     </label>
                     <Input
+                      id="policy-type"
                       type="text"
                       value={policyType}
                       onChange={(e) => setPolicyType(e.target.value)}
@@ -506,10 +550,14 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">
+                    <label
+                      htmlFor="coverage"
+                      className="block mb-1 text-sm font-medium"
+                    >
                       Coverage ($) <span className="text-red-500">*</span>
                     </label>
                     <Input
+                      id="coverage"
                       type="number"
                       value={coverage}
                       onChange={(e) => setCoverage(e.target.value)}
@@ -517,10 +565,14 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">
+                    <label
+                      htmlFor="start-date"
+                      className="block mb-1 text-sm font-medium"
+                    >
                       Start Date <span className="text-red-500">*</span>
                     </label>
                     <Input
+                      id="start-date"
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
@@ -528,10 +580,14 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">
+                    <label
+                      htmlFor="end-date"
+                      className="block mb-1 text-sm font-medium"
+                    >
                       End Date <span className="text-red-500">*</span>
                     </label>
                     <Input
+                      id="end-date"
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
@@ -539,11 +595,14 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">
+                    <label
+                      htmlFor="status"
+                      className="block mb-1 text-sm font-medium"
+                    >
                       Status <span className="text-red-500">*</span>
                     </label>
                     <Select value={status} onValueChange={setStatus}>
-                      <SelectTrigger>
+                      <SelectTrigger id="status">
                         <SelectValue placeholder="Select Status" />
                       </SelectTrigger>
                       <SelectContent>

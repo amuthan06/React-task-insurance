@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { supabase } from '../../lib/supabase'
 
 export interface Policy {
@@ -27,7 +27,9 @@ const initialState: PoliciesState = {
 export const fetchPolicies = createAsyncThunk('policies/fetch', async () => {
   const { data, error } = await supabase.from('policies').select('*')
   console.log('Fetch Policies Response:', { data, error }) // Debug log
-  if (error) {throw error}
+  if (error) {
+    throw error
+  }
   return data
 })
 
@@ -39,7 +41,9 @@ export const createPolicy = createAsyncThunk(
       .insert(policy)
       .select()
       .single()
-    if (error) {throw error}
+    if (error) {
+      throw error
+    }
     return data
   }
 )
@@ -53,7 +57,9 @@ export const updatePolicyThunk = createAsyncThunk(
       .eq('id', id)
       .select()
       .single()
-    if (error) {throw error}
+    if (error) {
+      throw error
+    }
     return data
   }
 )
@@ -62,7 +68,9 @@ export const deletePolicy = createAsyncThunk(
   'policies/delete',
   async (id: string) => {
     const { error } = await supabase.from('policies').delete().eq('id', id)
-    if (error) {throw error}
+    if (error) {
+      throw error
+    }
     return id
   }
 )

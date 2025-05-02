@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, Link, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 export default function Login() {
@@ -26,14 +26,18 @@ export default function Login() {
         email,
         password,
       })
-      if (error) {throw error}
+      if (error) {
+        throw error
+      }
 
       // Refresh the session to ensure user_metadata is up to date
       const {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser()
-      if (userError) {throw userError}
+      if (userError) {
+        throw userError
+      }
       console.log('User after login:', user) // Debug log
 
       navigate('/dashboard')
@@ -54,8 +58,11 @@ export default function Login() {
         <h2 className="text-2xl font-bold mb-4 text-center">Login</h2>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block mb-1">Email</label>
+            <label htmlFor="email" className="block mb-1">
+              Email
+            </label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -64,8 +71,11 @@ export default function Login() {
             />
           </div>
           <div>
-            <label className="block mb-1">Password</label>
+            <label htmlFor="password" className="block mb-1">
+              Password
+            </label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -84,6 +94,7 @@ export default function Login() {
         </form>
         <p className="mt-4 text-center">
           <button
+            type="button"
             onClick={handleResetPassword}
             className="text-blue-500 hover:underline"
           >

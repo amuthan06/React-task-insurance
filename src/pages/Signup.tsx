@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 export default function Signup() {
@@ -26,7 +26,9 @@ export default function Signup() {
           data: { role },
         },
       })
-      if (signupError) {throw signupError}
+      if (signupError) {
+        throw signupError
+      }
 
       if (!user) {
         throw new Error('User creation failed, no user returned.')
@@ -37,14 +39,18 @@ export default function Signup() {
         email,
         password,
       })
-      if (loginError) {throw loginError}
+      if (loginError) {
+        throw loginError
+      }
 
       // Refresh the session to ensure user_metadata is up to date
       const {
         data: { user: refreshedUser },
         error: refreshError,
       } = await supabase.auth.getUser()
-      if (refreshError) {throw refreshError}
+      if (refreshError) {
+        throw refreshError
+      }
 
       if (!refreshedUser) {
         throw new Error('Failed to fetch refreshed user after login.')
@@ -86,8 +92,11 @@ export default function Signup() {
         <h2 className="text-2xl font-bold mb-4 text-center">Sign Up</h2>
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
-            <label className="block mb-1">Email</label>
+            <label htmlFor="email" className="block mb-1">
+              Email
+            </label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -96,8 +105,11 @@ export default function Signup() {
             />
           </div>
           <div>
-            <label className="block mb-1">Password</label>
+            <label htmlFor="password" className="block mb-1">
+              Password
+            </label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -106,8 +118,11 @@ export default function Signup() {
             />
           </div>
           <div>
-            <label className="block mb-1">Role</label>
+            <label htmlFor="role" className="block mb-1">
+              Role
+            </label>
             <select
+              id="role"
               value={role}
               onChange={(e) => setRole(e.target.value)}
               className="border p-2 w-full rounded"
@@ -120,8 +135,11 @@ export default function Signup() {
           </div>
           {role === 'agent' && (
             <div>
-              <label className="block mb-1">Region</label>
+              <label htmlFor="region" className="block mb-1">
+                Region
+              </label>
               <select
+                id="region"
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
                 className="border p-2 w-full rounded"

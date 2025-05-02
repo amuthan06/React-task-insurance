@@ -1,20 +1,20 @@
-import { useEffect, useState } from 'react' // Import React and hooks
+import { useEffect, useState } from 'react'
+import { useDispatch } from 'react-redux'
 import {
+  Navigate,
+  Route,
   BrowserRouter as Router,
   Routes,
-  Route,
-  Navigate,
 } from 'react-router-dom'
-import { useDispatch } from 'react-redux'
 import { supabase } from './lib/supabase'
-import Login from './pages/Login'
-import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
-import ResetPasswordRequest from './pages/ResetPasswordRequest'
+import Login from './pages/Login'
 import ResetPassword from './pages/ResetPassword'
+import ResetPasswordRequest from './pages/ResetPasswordRequest'
+import Signup from './pages/Signup'
 
 export default function App() {
-  const dispatch = useDispatch()
+  const _dispatch = useDispatch()
 
   useEffect(() => {
     const {
@@ -30,7 +30,7 @@ export default function App() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [dispatch])
+  }, []) // Removed 'dispatch' from dependencies since it's not used in the effect
 
   return (
     <Router>
@@ -74,7 +74,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }, [])
 
   if (isAuthenticated === null) {
-    return <div>Loading...</div> // Show a loading state while checking session
+    return <div>Loading...</div>
   }
 
   return isAuthenticated ? children : <Navigate to="/login" />

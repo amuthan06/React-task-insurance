@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { supabase } from '../../lib/supabase'
 
 export interface Policyholder {
@@ -26,7 +26,9 @@ export const fetchPolicyholders = createAsyncThunk(
   async () => {
     const { data, error } = await supabase.from('policyholders').select('*')
     console.log('Fetch Policyholders Response:', { data, error }) // Debug log
-    if (error) {throw error}
+    if (error) {
+      throw error
+    }
     return data
   }
 )

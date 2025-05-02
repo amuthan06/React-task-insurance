@@ -1,42 +1,63 @@
-import { PieChart, Pie, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import {
+  PieChart,
+  Pie,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts'
 
 interface PolicyDistributionByRegionChartProps {
   policies: Array<{
-    id: string;
-    number: string;
-    type: string;
-    coverage: number;
-    start_date: string;
-    end_date: string;
-    status: string;
-    policyholder_id: string;
-  }>;
-  policyholders: Array<{ id: string; name: string; contact: string; user_id: string; region: string }>;
+    id: string
+    number: string
+    type: string
+    coverage: number
+    start_date: string
+    end_date: string
+    status: string
+    policyholder_id: string
+  }>
+  policyholders: Array<{
+    id: string
+    name: string
+    contact: string
+    user_id: string
+    region: string
+  }>
 }
 
-const PolicyDistributionByRegionChart = ({ policies, policyholders }: PolicyDistributionByRegionChartProps) => {
+const PolicyDistributionByRegionChart = ({
+  policies,
+  policyholders,
+}: PolicyDistributionByRegionChartProps) => {
   // Get all unique regions from policyholders
-  const allRegions = Array.from(new Set(policyholders.map((ph) => ph.region)));
+  const allRegions = Array.from(new Set(policyholders.map((ph) => ph.region)))
 
   // Map policies to regions via policyholders
-  const data = policies.reduce((acc: { region: string; count: number }[], policy) => {
-    const policyholder = policyholders.find((ph) => ph.id === policy.policyholder_id);
-    if (!policyholder) return acc;
+  const data = policies.reduce(
+    (acc: { region: string; count: number }[], policy) => {
+      const policyholder = policyholders.find(
+        (ph) => ph.id === policy.policyholder_id
+      )
+      if (!policyholder) {return acc}
 
-    let entry = acc.find((item) => item.region === policyholder.region);
-    if (!entry) {
-      entry = { region: policyholder.region, count: 0 };
-      acc.push(entry);
-    }
-    entry.count += 1;
-    return acc;
-  }, []);
+      let entry = acc.find((item) => item.region === policyholder.region)
+      if (!entry) {
+        entry = { region: policyholder.region, count: 0 }
+        acc.push(entry)
+      }
+      entry.count += 1
+      return acc
+    },
+    []
+  )
 
   // Ensure all regions are included, even those with zero policies
   const finalData = allRegions.map((region) => {
-    const entry = data.find((item) => item.region === region);
-    return { region, count: entry ? entry.count : 0 };
-  });
+    const entry = data.find((item) => item.region === region)
+    return { region, count: entry ? entry.count : 0 }
+  })
 
   // Define colors for each region
   const COLORS: { [key: string]: string } = {
@@ -44,11 +65,13 @@ const PolicyDistributionByRegionChart = ({ policies, policyholders }: PolicyDist
     South: '#82ca9d', // Green
     West: '#ff6b6b', // Red
     East: '#ffd700', // Yellow
-  };
+  }
 
   return (
     <div className="mb-6">
-      <h3 className="text-lg font-semibold mb-2">Policy Distribution by Region</h3>
+      <h3 className="text-lg font-semibold mb-2">
+        Policy Distribution by Region
+      </h3>
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie
@@ -61,10 +84,13 @@ const PolicyDistributionByRegionChart = ({ policies, policyholders }: PolicyDist
             label
           >
             {finalData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[entry.region] || '#8884d8'} />
+              <Cell
+                key={`cell-${index}`}
+                fill={COLORS[entry.region] || '#8884d8'}
+              />
             ))}
           </Pie>
-          <Tooltip 
+          <Tooltip
             contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc' }}
             labelStyle={{ color: '#333' }}
           />
@@ -72,7 +98,7 @@ const PolicyDistributionByRegionChart = ({ policies, policyholders }: PolicyDist
         </PieChart>
       </ResponsiveContainer>
     </div>
-  );
-};
+  )
+}
 
-export default PolicyDistributionByRegionChart;
+export default PolicyDistributionByRegionChart

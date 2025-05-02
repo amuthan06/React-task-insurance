@@ -1,62 +1,68 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 
 export default function Signup() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('policy_holder');
-  const [region, setRegion] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState('policy_holder')
+  const [region, setRegion] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+    e.preventDefault()
+    setError(null)
 
     try {
       // Sign up the user
-      const { data: { user }, error: signupError } = await supabase.auth.signUp({
+      const {
+        data: { user },
+        error: signupError,
+      } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: { role },
         },
-      });
-      if (signupError) throw signupError;
+      })
+      if (signupError) {throw signupError}
 
       if (!user) {
-        throw new Error('User creation failed, no user returned.');
+        throw new Error('User creation failed, no user returned.')
       }
 
       // Log the user in to establish a session
       const { error: loginError } = await supabase.auth.signInWithPassword({
         email,
         password,
-      });
-      if (loginError) throw loginError;
+      })
+      if (loginError) {throw loginError}
 
       // Refresh the session to ensure user_metadata is up to date
-      const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
-      if (refreshError) throw refreshError;
+      const {
+        data: { user: refreshedUser },
+        error: refreshError,
+      } = await supabase.auth.getUser()
+      if (refreshError) {throw refreshError}
 
       if (!refreshedUser) {
-        throw new Error('Failed to fetch refreshed user after login.');
+        throw new Error('Failed to fetch refreshed user after login.')
       }
 
-      console.log('Refreshed user after signup:', refreshedUser); // Debug log
+      console.log('Refreshed user after signup:', refreshedUser) // Debug log
 
       // If the role is agent, insert into agents table
       if (role === 'agent') {
         if (!region) {
-          throw new Error('Please select a region.');
+          throw new Error('Please select a region.')
         }
         const { error: agentError } = await supabase
           .from('agents')
-          .insert({ user_id: refreshedUser.id, region });
+          .insert({ user_id: refreshedUser.id, region })
         if (agentError) {
-          console.error('Agent Insert Error:', agentError);
-          throw agentError;
+          console.error('Agent Insert Error:', agentError)
+          throw agentError
         }
       }
 
@@ -65,13 +71,14 @@ export default function Signup() {
         state: {
           message: 'Sign-up successful! Please log in to continue.',
         },
-      });
+      })
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to sign up.';
-      setError(errorMessage);
-      console.error('Error during signup:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to sign up.'
+      setError(errorMessage)
+      console.error('Error during signup:', error)
     }
-  };
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -144,5 +151,5 @@ export default function Signup() {
         </p>
       </div>
     </div>
-  );
+  )
 }

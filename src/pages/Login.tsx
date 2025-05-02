@@ -1,48 +1,52 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
+  const location = useLocation()
 
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (location.state?.message) {
-      setMessage(location.state.message);
+      setMessage(location.state.message)
     }
-  }, [location]);
+  }, [location])
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+    e.preventDefault()
+    setError(null)
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-      });
-      if (error) throw error;
+      })
+      if (error) {throw error}
 
       // Refresh the session to ensure user_metadata is up to date
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-      console.log('User after login:', user); // Debug log
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
+      if (userError) {throw userError}
+      console.log('User after login:', user) // Debug log
 
-      navigate('/dashboard');
+      navigate('/dashboard')
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to log in.';
-      setError(errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to log in.'
+      setError(errorMessage)
     }
-  };
+  }
 
   const handleResetPassword = () => {
-    navigate('/reset-password-request');
-  };
+    navigate('/reset-password-request')
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -94,5 +98,5 @@ export default function Login() {
         </p>
       </div>
     </div>
-  );
+  )
 }

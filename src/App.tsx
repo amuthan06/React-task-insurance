@@ -1,64 +1,81 @@
-import { useEffect, useState } from 'react'; // Import React and hooks
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { supabase } from './lib/supabase';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import Dashboard from './pages/Dashboard';
-import ResetPasswordRequest from './pages/ResetPasswordRequest';
-import ResetPassword from './pages/ResetPassword';
+import { useEffect, useState } from 'react' // Import React and hooks
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom'
+import { useDispatch } from 'react-redux'
+import { supabase } from './lib/supabase'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import Dashboard from './pages/Dashboard'
+import ResetPasswordRequest from './pages/ResetPasswordRequest'
+import ResetPassword from './pages/ResetPassword'
 
 export default function App() {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch()
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') {
-        console.log('User signed in:', session?.user);
+        console.log('User signed in:', session?.user)
       } else if (event === 'SIGNED_OUT') {
-        console.log('User signed out');
+        console.log('User signed out')
       }
-    });
+    })
 
     return () => {
-      subscription.unsubscribe();
-    };
-  }, [dispatch]);
+      subscription.unsubscribe()
+    }
+  }, [dispatch])
 
   return (
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/reset-password-request" element={<ResetPasswordRequest />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reset-password-request"
+          element={<ResetPasswordRequest />}
+        />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<Navigate to="/login" />} />
       </Routes>
     </Router>
-  );
+  )
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
+      const { data, error } = await supabase.auth.getSession()
       if (error) {
-        console.error('Error fetching session:', error);
-        setIsAuthenticated(false);
-        return;
+        console.error('Error fetching session:', error)
+        setIsAuthenticated(false)
+        return
       }
-      setIsAuthenticated(!!data.session);
-    };
+      setIsAuthenticated(!!data.session)
+    }
 
-    checkSession();
-  }, []);
+    checkSession()
+  }, [])
 
   if (isAuthenticated === null) {
-    return <div>Loading...</div>; // Show a loading state while checking session
+    return <div>Loading...</div> // Show a loading state while checking session
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  return isAuthenticated ? children : <Navigate to="/login" />
 }

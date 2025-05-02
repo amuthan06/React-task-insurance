@@ -1,41 +1,69 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts'
 
 interface PolicyCountByTypeAndStatusChartProps {
   policies: Array<{
-    id: string;
-    number: string;
-    type: string;
-    coverage: number;
-    start_date: string;
-    end_date: string;
-    status: string;
-    policyholder_id: string;
-  }>;
+    id: string
+    number: string
+    type: string
+    coverage: number
+    start_date: string
+    end_date: string
+    status: string
+    policyholder_id: string
+  }>
 }
 
-const PolicyCountByTypeAndStatusChart = ({ policies }: PolicyCountByTypeAndStatusChartProps) => {
+const PolicyCountByTypeAndStatusChart = ({
+  policies,
+}: PolicyCountByTypeAndStatusChartProps) => {
   // Aggregate data by type and status
-  const data = policies.reduce((acc: { type: string; Active: number; Expired: number; Pending: number }[], policy) => {
-    let entry = acc.find((item) => item.type === policy.type);
-    if (!entry) {
-      entry = { type: policy.type, Active: 0, Expired: 0, Pending: 0 };
-      acc.push(entry);
-    }
-    if (policy.status === 'Active') entry.Active += 1;
-    if (policy.status === 'Expired') entry.Expired += 1;
-    if (policy.status === 'Pending') entry.Pending += 1;
-    return acc;
-  }, []);
+  const data = policies.reduce(
+    (
+      acc: { type: string; Active: number; Expired: number; Pending: number }[],
+      policy
+    ) => {
+      let entry = acc.find((item) => item.type === policy.type)
+      if (!entry) {
+        entry = { type: policy.type, Active: 0, Expired: 0, Pending: 0 }
+        acc.push(entry)
+      }
+      if (policy.status === 'Active') {
+        entry.Active += 1
+      }
+      if (policy.status === 'Expired') {
+        entry.Expired += 1
+      }
+      if (policy.status === 'Pending') {
+        entry.Pending += 1
+      }
+      return acc
+    },
+    []
+  )
 
   return (
     <div className="mb-6">
-      <h3 className="text-lg font-semibold mb-2">Policy Count by Type and Status</h3>
+      <h3 className="text-lg font-semibold mb-2">
+        Policy Count by Type and Status
+      </h3>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+        <BarChart
+          data={data}
+          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+        >
           <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
           <XAxis dataKey="type" stroke="#666" />
           <YAxis stroke="#666" />
-          <Tooltip 
+          <Tooltip
             contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc' }}
             labelStyle={{ color: '#333' }}
           />
@@ -46,7 +74,7 @@ const PolicyCountByTypeAndStatusChart = ({ policies }: PolicyCountByTypeAndStatu
         </BarChart>
       </ResponsiveContainer>
     </div>
-  );
-};
+  )
+}
 
-export default PolicyCountByTypeAndStatusChart;
+export default PolicyCountByTypeAndStatusChart

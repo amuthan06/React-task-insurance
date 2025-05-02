@@ -1,29 +1,30 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 
 export default function ResetPasswordRequest() {
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [email, setEmail] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   const handleResetPasswordRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMessage(null);
-    setError(null);
+    e.preventDefault()
+    setMessage(null)
+    setError(null)
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: 'http://localhost:5173/reset-password',
-      });
-      if (error) throw error;
-      setMessage('Password reset email sent! Check your inbox.');
+      })
+      if (error) {throw error}
+      setMessage('Password reset email sent! Check your inbox.')
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send reset email.';
-      setError(errorMessage);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to send reset email.'
+      setError(errorMessage)
     }
-  };
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -31,7 +32,9 @@ export default function ResetPasswordRequest() {
         <h2 className="text-2xl font-bold mb-4 text-center">Reset Password</h2>
         <form onSubmit={handleResetPasswordRequest} className="space-y-4">
           <div>
-            <label className="block mb-1">Email <span className="text-red-500">*</span></label>
+            <label className="block mb-1">
+              Email <span className="text-red-500">*</span>
+            </label>
             <input
               type="email"
               value={email}
@@ -60,5 +63,5 @@ export default function ResetPasswordRequest() {
         </p>
       </div>
     </div>
-  );
+  )
 }

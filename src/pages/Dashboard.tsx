@@ -1,133 +1,186 @@
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { fetchPolicyholders } from '../features/policyholders/policyholdersSlice';
-import { fetchPolicies, createPolicy, updatePolicyThunk, deletePolicy } from '../features/policies/policiesSlice';
-import { RootState, AppDispatch } from '../store';
-import { supabase } from '../lib/supabase';
-import PolicyholdersBasedOnRegionChart from '../components/PolicyholdersBasedOnRegionChart';
-import PolicyCountByTypeAndStatusChart from '../components/PolicyCountByTypeAndStatusChart';
-import CoverageOverTimeChart from '../components/CoverageOverTimeChart';
-import PolicyDistributionByRegionChart from '../components/PolicyDistributionByRegionChart';
-import { Policy } from '../features/policies/policiesSlice';
-import { Button } from '../components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Input } from '../components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import { useEffect, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
+import { fetchPolicyholders } from '../features/policyholders/policyholdersSlice'
+import {
+  fetchPolicies,
+  createPolicy,
+  updatePolicyThunk,
+  deletePolicy,
+} from '../features/policies/policiesSlice'
+import { RootState, AppDispatch } from '../store'
+import { supabase } from '../lib/supabase'
+import PolicyholdersBasedOnRegionChart from '../components/PolicyholdersBasedOnRegionChart'
+import PolicyCountByTypeAndStatusChart from '../components/PolicyCountByTypeAndStatusChart'
+import CoverageOverTimeChart from '../components/CoverageOverTimeChart'
+import PolicyDistributionByRegionChart from '../components/PolicyDistributionByRegionChart'
+import { Policy } from '../features/policies/policiesSlice'
+import { Button } from '../components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select'
+import { Input } from '../components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table'
 
 export default function Dashboard() {
-  const dispatch = useDispatch<AppDispatch>();
-  const { list: rawPolicyholders, loading: phLoading, error: phError } = useSelector((state: RootState) => state.policyholders);
-  const { list: rawPolicies, loading: pLoading, error: pError } = useSelector((state: RootState) => state.policies);
-  const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [contact, setContact] = useState('');
-  const [region, setRegion] = useState('none');
-  const [policyNumber, setPolicyNumber] = useState('');
-  const [policyType, setPolicyType] = useState('');
-  const [coverage, setCoverage] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [status, setStatus] = useState('Active');
-  const [selectedPolicyholderId, setSelectedPolicyholderId] = useState('none');
-  const [policyError, setPolicyError] = useState<string | null>(null);
-  const [editingPolicyId, setEditingPolicyId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState('none');
-  const [regionFilter, setRegionFilter] = useState('none');
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const dispatch = useDispatch<AppDispatch>()
+  const {
+    list: rawPolicyholders,
+    loading: phLoading,
+    error: phError,
+  } = useSelector((state: RootState) => state.policyholders)
+  const {
+    list: rawPolicies,
+    loading: pLoading,
+    error: pError,
+  } = useSelector((state: RootState) => state.policies)
+  const navigate = useNavigate()
+  const [name, setName] = useState('')
+  const [contact, setContact] = useState('')
+  const [region, setRegion] = useState('none')
+  const [policyNumber, setPolicyNumber] = useState('')
+  const [policyType, setPolicyType] = useState('')
+  const [coverage, setCoverage] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [status, setStatus] = useState('Active')
+  const [selectedPolicyholderId, setSelectedPolicyholderId] = useState('none')
+  const [policyError, setPolicyError] = useState<string | null>(null)
+  const [editingPolicyId, setEditingPolicyId] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState('none')
+  const [regionFilter, setRegionFilter] = useState('none')
+  const [dateRange, setDateRange] = useState({ start: '', end: '' })
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchUserRole = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser()
       if (error) {
-        console.error('Error fetching user:', error);
-        setUserRole('policy_holder');
-        return;
+        console.error('Error fetching user:', error)
+        setUserRole('policy_holder')
+        return
       }
 
       if (!user) {
-        console.error('No user found in session');
-        setUserRole('policy_holder');
-        return;
+        console.error('No user found in session')
+        setUserRole('policy_holder')
+        return
       }
 
-      console.log('Full user object:', user);
-      const role = user.user_metadata?.role || 'policy_holder';
-      console.log('Fetched user metadata:', user.user_metadata);
-      console.log('User role set to:', role);
-      setUserRole(role);
-    };
+      console.log('Full user object:', user)
+      const role = user.user_metadata?.role || 'policy_holder'
+      console.log('Fetched user metadata:', user.user_metadata)
+      console.log('User role set to:', role)
+      setUserRole(role)
+    }
 
-    fetchUserRole();
-  }, []);
+    fetchUserRole()
+  }, [])
 
   useEffect(() => {
-    dispatch(fetchPolicyholders());
-    dispatch(fetchPolicies());
-  }, [dispatch]);
+    dispatch(fetchPolicyholders())
+    dispatch(fetchPolicies())
+  }, [dispatch])
 
   // Add logging for debugging
-  console.log('User Role:', userRole);
-  console.log('Policyholders Loading:', phLoading, 'Error:', phError, 'Data:', rawPolicyholders);
-  console.log('Policies Loading:', pLoading, 'Error:', pError, 'Data:', rawPolicies);
+  console.log('User Role:', userRole)
+  console.log(
+    'Policyholders Loading:',
+    phLoading,
+    'Error:',
+    phError,
+    'Data:',
+    rawPolicyholders
+  )
+  console.log(
+    'Policies Loading:',
+    pLoading,
+    'Error:',
+    pError,
+    'Data:',
+    rawPolicies
+  )
 
   // Apply filters to policyholders
-  const policyholders = regionFilter !== 'none'
-    ? rawPolicyholders.filter((ph) => ph.region === regionFilter)
-    : rawPolicyholders;
+  const policyholders =
+    regionFilter !== 'none'
+      ? rawPolicyholders.filter((ph) => ph.region === regionFilter)
+      : rawPolicyholders
 
   // Apply filters to policies
   const policies = rawPolicies.filter((policy) => {
-    const matchesStatus = statusFilter !== 'none' ? policy.status === statusFilter : true;
-    const policyholder = rawPolicyholders.find((ph) => ph.id === policy.policyholder_id);
-    const matchesRegion = regionFilter !== 'none' && policyholder ? policyholder.region === regionFilter : true;
+    const matchesStatus =
+      statusFilter !== 'none' ? policy.status === statusFilter : true
+    const policyholder = rawPolicyholders.find(
+      (ph) => ph.id === policy.policyholder_id
+    )
+    const matchesRegion =
+      regionFilter !== 'none' && policyholder
+        ? policyholder.region === regionFilter
+        : true
     const matchesDateRange =
       dateRange.start && dateRange.end
-        ? policy.start_date <= dateRange.end && policy.end_date >= dateRange.start
-        : true;
+        ? policy.start_date <= dateRange.end &&
+          policy.end_date >= dateRange.start
+        : true
 
-    return matchesStatus && matchesRegion && matchesDateRange;
-  });
+    return matchesStatus && matchesRegion && matchesDateRange
+  })
 
   const handleLogout = async () => {
-    dispatch({ type: 'policyholders/clear' });
-    dispatch({ type: 'policies/clear' });
-    await supabase.auth.signOut();
-    navigate('/login');
-  };
+    dispatch({ type: 'policyholders/clear' })
+    dispatch({ type: 'policies/clear' })
+    await supabase.auth.signOut()
+    navigate('/login')
+  }
 
   const handleAddPolicyholder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    e.preventDefault()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) {return}
     if (region === 'none') {
-      alert('Please select a region.');
-      return;
+      alert('Please select a region.')
+      return
     }
     const { error } = await supabase.from('policyholders').insert({
       name,
       contact,
       region,
       user_id: user.id,
-    });
+    })
     if (error) {
-      console.error(error);
+      console.error(error)
     } else {
-      setName('');
-      setContact('');
-      setRegion('none');
-      dispatch(fetchPolicyholders());
+      setName('')
+      setContact('')
+      setRegion('none')
+      dispatch(fetchPolicyholders())
     }
-  };
+  }
 
   const handleAddPolicy = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPolicyError(null);
+    e.preventDefault()
+    setPolicyError(null)
     if (selectedPolicyholderId === 'none') {
-      setPolicyError('Please select a policyholder.');
-      return;
+      setPolicyError('Please select a policyholder.')
+      return
     }
     try {
       await dispatch(
@@ -140,39 +193,40 @@ export default function Dashboard() {
           status,
           policyholder_id: selectedPolicyholderId,
         })
-      );
-      setPolicyNumber('');
-      setPolicyType('');
-      setCoverage('');
-      setStartDate('');
-      setEndDate('');
-      setStatus('Active');
-      setSelectedPolicyholderId('none');
+      )
+      setPolicyNumber('')
+      setPolicyType('')
+      setCoverage('')
+      setStartDate('')
+      setEndDate('')
+      setStatus('Active')
+      setSelectedPolicyholderId('none')
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to add policy.';
-      setPolicyError(errorMessage);
-      console.error('Add Policy Error:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to add policy.'
+      setPolicyError(errorMessage)
+      console.error('Add Policy Error:', error)
     }
-  };
+  }
 
   const handleEditPolicy = (policy: Policy) => {
-    setEditingPolicyId(policy.id);
-    setPolicyNumber(policy.number);
-    setPolicyType(policy.type);
-    setCoverage(policy.coverage.toString());
-    setStartDate(policy.start_date);
-    setEndDate(policy.end_date);
-    setStatus(policy.status);
-    setSelectedPolicyholderId(policy.policyholder_id);
-  };
+    setEditingPolicyId(policy.id)
+    setPolicyNumber(policy.number)
+    setPolicyType(policy.type)
+    setCoverage(policy.coverage.toString())
+    setStartDate(policy.start_date)
+    setEndDate(policy.end_date)
+    setStatus(policy.status)
+    setSelectedPolicyholderId(policy.policyholder_id)
+  }
 
   const handleUpdatePolicy = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPolicyError(null);
-    if (!editingPolicyId) return;
+    e.preventDefault()
+    setPolicyError(null)
+    if (!editingPolicyId) {return}
     if (selectedPolicyholderId === 'none') {
-      setPolicyError('Please select a policyholder.');
-      return;
+      setPolicyError('Please select a policyholder.')
+      return
     }
     try {
       await dispatch(
@@ -188,55 +242,65 @@ export default function Dashboard() {
             policyholder_id: selectedPolicyholderId,
           },
         })
-      );
-      setEditingPolicyId(null);
-      setPolicyNumber('');
-      setPolicyType('');
-      setCoverage('');
-      setStartDate('');
-      setEndDate('');
-      setStatus('Active');
-      setSelectedPolicyholderId('none');
+      )
+      setEditingPolicyId(null)
+      setPolicyNumber('')
+      setPolicyType('')
+      setCoverage('')
+      setStartDate('')
+      setEndDate('')
+      setStatus('Active')
+      setSelectedPolicyholderId('none')
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update policy.';
-      setPolicyError(errorMessage);
-      console.error('Update Policy Error:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to update policy.'
+      setPolicyError(errorMessage)
+      console.error('Update Policy Error:', error)
     }
-  };
+  }
 
   const handleDeletePolicy = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this policy?')) {
       try {
-        await dispatch(deletePolicy(id));
+        await dispatch(deletePolicy(id))
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to delete policy.';
-        setPolicyError(errorMessage);
-        console.error('Delete Policy Error:', error);
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to delete policy.'
+        setPolicyError(errorMessage)
+        console.error('Delete Policy Error:', error)
       }
     }
-  };
+  }
 
   if (!userRole) {
-    console.log('Rendering Loading state...');
-    return <div>Loading...</div>;
+    console.log('Rendering Loading state...')
+    return <div>Loading...</div>
   }
 
   if (phError || pError) {
-    console.log('Rendering Error state...');
+    console.log('Rendering Error state...')
     return (
       <div className="p-6">
-        {phError && <p className="text-red-500">Policyholders Error: {phError}</p>}
+        {phError && (
+          <p className="text-red-500">Policyholders Error: {phError}</p>
+        )}
         {pError && <p className="text-red-500">Policies Error: {pError}</p>}
       </div>
-    );
+    )
   }
 
-  console.log('Rendering Main Dashboard...');
+  console.log('Rendering Main Dashboard...')
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">{userRole === 'admin' ? 'Admin Dashboard' : userRole === 'agent' ? 'Agent Dashboard' : 'Policyholders Dashboard'}</h2>
+        <h2 className="text-2xl font-bold text-gray-800">
+          {userRole === 'admin'
+            ? 'Admin Dashboard'
+            : userRole === 'agent'
+              ? 'Agent Dashboard'
+              : 'Policyholders Dashboard'}
+        </h2>
         <Button variant="destructive" onClick={handleLogout}>
           Logout
         </Button>
@@ -249,7 +313,9 @@ export default function Dashboard() {
         <CardContent>
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block mb-1 text-sm font-medium">Policy Status</label>
+              <label className="block mb-1 text-sm font-medium">
+                Policy Status
+              </label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select Status" />
@@ -278,17 +344,23 @@ export default function Dashboard() {
               </Select>
             </div>
             <div>
-              <label className="block mb-1 text-sm font-medium">Date Range</label>
+              <label className="block mb-1 text-sm font-medium">
+                Date Range
+              </label>
               <div className="flex space-x-2">
                 <Input
                   type="date"
                   value={dateRange.start}
-                  onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                  onChange={(e) =>
+                    setDateRange({ ...dateRange, start: e.target.value })
+                  }
                 />
                 <Input
                   type="date"
                   value={dateRange.end}
-                  onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                  onChange={(e) =>
+                    setDateRange({ ...dateRange, end: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -314,7 +386,10 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <PolicyDistributionByRegionChart policies={policies} policyholders={policyholders} />
+            <PolicyDistributionByRegionChart
+              policies={policies}
+              policyholders={policyholders}
+            />
           </CardContent>
         </Card>
       </div>
@@ -329,7 +404,9 @@ export default function Dashboard() {
               <form onSubmit={handleAddPolicyholder} className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block mb-1 text-sm font-medium">Name <span className="text-red-500">*</span></label>
+                    <label className="block mb-1 text-sm font-medium">
+                      Name <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       type="text"
                       value={name}
@@ -338,7 +415,9 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">Contact <span className="text-red-500">*</span></label>
+                    <label className="block mb-1 text-sm font-medium">
+                      Contact <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       type="text"
                       value={contact}
@@ -347,7 +426,9 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">Region <span className="text-red-500">*</span></label>
+                    <label className="block mb-1 text-sm font-medium">
+                      Region <span className="text-red-500">*</span>
+                    </label>
                     <Select value={region} onValueChange={setRegion}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select Region" />
@@ -367,19 +448,33 @@ export default function Dashboard() {
 
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>{editingPolicyId ? 'Edit Policy' : 'Add Policy'}</CardTitle>
+              <CardTitle>
+                {editingPolicyId ? 'Edit Policy' : 'Add Policy'}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={editingPolicyId ? handleUpdatePolicy : handleAddPolicy} className="space-y-4">
+              <form
+                onSubmit={
+                  editingPolicyId ? handleUpdatePolicy : handleAddPolicy
+                }
+                className="space-y-4"
+              >
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block mb-1 text-sm font-medium">Policyholder <span className="text-red-500">*</span></label>
-                    <Select value={selectedPolicyholderId} onValueChange={setSelectedPolicyholderId}>
+                    <label className="block mb-1 text-sm font-medium">
+                      Policyholder <span className="text-red-500">*</span>
+                    </label>
+                    <Select
+                      value={selectedPolicyholderId}
+                      onValueChange={setSelectedPolicyholderId}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select Policyholder" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Select Policyholder</SelectItem>
+                        <SelectItem value="none">
+                          Select Policyholder
+                        </SelectItem>
                         {policyholders.map((ph) => (
                           <SelectItem key={ph.id} value={ph.id}>
                             {ph.name}
@@ -389,7 +484,9 @@ export default function Dashboard() {
                     </Select>
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">Policy Number <span className="text-red-500">*</span></label>
+                    <label className="block mb-1 text-sm font-medium">
+                      Policy Number <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       type="text"
                       value={policyNumber}
@@ -398,7 +495,9 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">Type <span className="text-red-500">*</span></label>
+                    <label className="block mb-1 text-sm font-medium">
+                      Type <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       type="text"
                       value={policyType}
@@ -407,7 +506,9 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">Coverage ($) <span className="text-red-500">*</span></label>
+                    <label className="block mb-1 text-sm font-medium">
+                      Coverage ($) <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       type="number"
                       value={coverage}
@@ -416,7 +517,9 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">Start Date <span className="text-red-500">*</span></label>
+                    <label className="block mb-1 text-sm font-medium">
+                      Start Date <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       type="date"
                       value={startDate}
@@ -425,7 +528,9 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">End Date <span className="text-red-500">*</span></label>
+                    <label className="block mb-1 text-sm font-medium">
+                      End Date <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       type="date"
                       value={endDate}
@@ -434,7 +539,9 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">Status <span className="text-red-500">*</span></label>
+                    <label className="block mb-1 text-sm font-medium">
+                      Status <span className="text-red-500">*</span>
+                    </label>
                     <Select value={status} onValueChange={setStatus}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select Status" />
@@ -449,7 +556,10 @@ export default function Dashboard() {
                 </div>
                 {policyError && <p className="text-red-500">{policyError}</p>}
                 <div className="space-x-2">
-                  <Button type="submit" variant={editingPolicyId ? "default" : "secondary"}>
+                  <Button
+                    type="submit"
+                    variant={editingPolicyId ? 'default' : 'secondary'}
+                  >
                     {editingPolicyId ? 'Update Policy' : 'Add Policy'}
                   </Button>
                   {editingPolicyId && (
@@ -457,15 +567,15 @@ export default function Dashboard() {
                       type="button"
                       variant="outline"
                       onClick={() => {
-                        setEditingPolicyId(null);
-                        setPolicyNumber('');
-                        setPolicyType('');
-                        setCoverage('');
-                        setStartDate('');
-                        setEndDate('');
-                        setStatus('Active');
-                        setSelectedPolicyholderId('none');
-                        setPolicyError(null);
+                        setEditingPolicyId(null)
+                        setPolicyNumber('')
+                        setPolicyType('')
+                        setCoverage('')
+                        setStartDate('')
+                        setEndDate('')
+                        setStatus('Active')
+                        setSelectedPolicyholderId('none')
+                        setPolicyError(null)
                       }}
                     >
                       Cancel
@@ -538,5 +648,5 @@ export default function Dashboard() {
         <p className="text-gray-600">No policies available.</p>
       )}
     </div>
-  );
+  )
 }

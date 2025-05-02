@@ -1,55 +1,43 @@
-import { useMemo } from 'react';
-import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+interface CoverageOverTimeChartProps {
+  policies: Array<{
+    id: string;
+    number: string;
+    type: string;
+    coverage: number;
+    start_date: string;
+    end_date: string;
+    status: string;
+    policyholder_id: string;
+  }>;
+}
 
-export default function CoverageOverTimeChart({ dateRange }: { dateRange: { start: string; end: string } }) {
-  const policies = useSelector((state: RootState) => state.policies.list);
-
-  const filteredPolicies = policies.filter((policy) => {
-    const policyDate = new Date(policy.start_date);
-    const start = dateRange.start ? new Date(dateRange.start) : new Date('1900-01-01');
-    const end = dateRange.end ? new Date(dateRange.end) : new Date('2100-12-31');
-    return policyDate >= start && policyDate <= end;
-  });
-
-  const chartData = useMemo(() => {
-    const dates = [...new Set(filteredPolicies.map((p) => p.start_date))].sort();
-    const data = dates.map((date) => {
-      const policiesOnDate = filteredPolicies.filter((p) => p.start_date === date);
-      return policiesOnDate.reduce((sum, p) => sum + p.coverage, 0);
-    });
-
-    return {
-      labels: dates,
-      datasets: [
-        {
-          label: 'Total Coverage ($)',
-          data,
-          borderColor: 'rgba(75, 192, 192, 1)',
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          fill: true,
-        },
-      ],
-    };
-  }, [filteredPolicies]);
+const CoverageOverTimeChart = ({ policies }: CoverageOverTimeChartProps) => {
+  // Prepare data for the chart (coverage over time)
+  const data = policies.map((policy) => ({
+    date: policy.start_date,
+    coverage: policy.coverage,
+  }));
 
   return (
     <div className="mb-6">
       <h3 className="text-lg font-semibold mb-2">Coverage Over Time</h3>
-      <Line
-        data={chartData}
-        options={{
-          responsive: true,
-          plugins: {
-            legend: { position: 'top' },
-            title: { display: true, text: 'Coverage Over Time' },
-          },
-        }}
-      />
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+          <XAxis dataKey="date" stroke="#666" />
+          <YAxis stroke="#666" />
+          <Tooltip 
+            contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc' }}
+            labelStyle={{ color: '#333' }}
+          />
+          <Legend verticalAlign="top" height={36} />
+          <Line type="monotone" dataKey="coverage" stroke="#8884d8" name="Coverage ($)" />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
-}
+};
+
+export default CoverageOverTimeChart;

@@ -5,7 +5,7 @@ import { fetchPolicyholders } from '../features/policyholders/policyholdersSlice
 import { fetchPolicies, createPolicy, updatePolicyThunk, deletePolicy } from '../features/policies/policiesSlice';
 import { RootState, AppDispatch } from '../store';
 import { supabase } from '../lib/supabase';
-import PolicyholderChart from '../components/PolicyholderChart';
+import PolicyholdersBasedOnRegionChart from '../components/PolicyholdersBasedOnRegionChart';
 import PolicyCountByTypeAndStatusChart from '../components/PolicyCountByTypeAndStatusChart';
 import CoverageOverTimeChart from '../components/CoverageOverTimeChart';
 import PolicyDistributionByRegionChart from '../components/PolicyDistributionByRegionChart';
@@ -13,12 +13,12 @@ import { Policy } from '../features/policies/policiesSlice';
 
 export default function Dashboard() {
   const dispatch = useDispatch<AppDispatch>();
-  const { list: policyholders, loading: phLoading, error: phError } = useSelector((state: RootState) => state.policyholders);
-  const { list: policies, loading: pLoading, error: pError } = useSelector((state: RootState) => state.policies);
+  const { list: rawPolicyholders, loading: phLoading, error: phError } = useSelector((state: RootState) => state.policyholders);
+  const { list: rawPolicies, loading: pLoading, error: pError } = useSelector((state: RootState) => state.policies);
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
-  const [region, setRegion] = useState(''); // New state for region
+  const [region, setRegion] = useState('');
   const [policyNumber, setPolicyNumber] = useState('');
   const [policyType, setPolicyType] = useState('');
   const [coverage, setCoverage] = useState('');
@@ -29,6 +29,7 @@ export default function Dashboard() {
   const [policyError, setPolicyError] = useState<string | null>(null);
   const [editingPolicyId, setEditingPolicyId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
+  const [regionFilter, setRegionFilter] = useState('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -47,10 +48,10 @@ export default function Dashboard() {
         return;
       }
 
-      console.log('DEBUG - Full user object:', user);
+      console.log('Full user object:', user);
       const role = user.user_metadata?.role || 'policy_holder';
-      console.log('DEBUG - Fetched user metadata:', user.user_metadata);
-      console.log('DEBUG - User role:', role);
+      console.log('Fetched user metadata:', user.user_metadata);
+      console.log('User role:', role);
       setUserRole(role);
     };
 
@@ -61,6 +62,29 @@ export default function Dashboard() {
     dispatch(fetchPolicyholders());
     dispatch(fetchPolicies());
   }, [dispatch]);
+
+  // Apply filters to policyholders
+  const policyholders = regionFilter
+    ? rawPolicyholders.filter((ph) => ph.region === regionFilter)
+    : rawPolicyholders;
+
+  // Apply filters to policies
+  const policies = rawPolicies.filter((policy) => {
+    // Status Filter
+    const matchesStatus = statusFilter ? policy.status === statusFilter : true;
+
+    // Region Filter: Filter policies based on the policyholder's region
+    const policyholder = rawPolicyholders.find((ph) => ph.id === policy.policyholder_id);
+    const matchesRegion = regionFilter && policyholder ? policyholder.region === regionFilter : true;
+
+    // Date Range Filter: Policy should be active within the date range
+    const matchesDateRange =
+      dateRange.start && dateRange.end
+        ? policy.start_date <= dateRange.end && policy.end_date >= dateRange.start
+        : true;
+
+    return matchesStatus && matchesRegion && matchesDateRange;
+  });
 
   const handleLogout = async () => {
     dispatch({ type: 'policyholders/clear' });
@@ -76,7 +100,7 @@ export default function Dashboard() {
     const { error } = await supabase.from('policyholders').insert({
       name,
       contact,
-      region, // Include region in the insert
+      region,
       user_id: user.id,
     });
     if (error) {
@@ -84,7 +108,7 @@ export default function Dashboard() {
     } else {
       setName('');
       setContact('');
-      setRegion(''); // Reset region
+      setRegion('');
       dispatch(fetchPolicyholders());
     }
   };
@@ -183,8 +207,8 @@ export default function Dashboard() {
     return <div>Loading...</div>;
   }
 
-  console.log('DEBUG - Policyholders in Dashboard:', policyholders);
-  console.log('DEBUG - Policies in Dashboard:', policies);
+  console.log('Policyholders in Dashboard:', policyholders);
+  console.log('Policies in Dashboard:', policies);
 
   return (
     <div className="p-6">
@@ -200,9 +224,9 @@ export default function Dashboard() {
 
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">Filters</h3>
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-3 gap-4 mb-4">
           <div>
-            <label className="block mb-1">Status Filter</label>
+            <label className="block mb-1">Policy Status</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -212,6 +236,20 @@ export default function Dashboard() {
               <option value="Active">Active</option>
               <option value="Expired">Expired</option>
               <option value="Pending">Pending</option>
+            </select>
+          </div>
+          <div>
+            <label className="block mb-1">Region</label>
+            <select
+              value={regionFilter}
+              onChange={(e) => setRegionFilter(e.target.value)}
+              className="border p-2 w-full rounded"
+            >
+              <option value="">All Regions</option>
+              <option value="North">North</option>
+              <option value="South">South</option>
+              <option value="East">East</option>
+              <option value="West">West</option>
             </select>
           </div>
           <div>
@@ -233,15 +271,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <PolicyholderChart />
-        <PolicyCountByTypeAndStatusChart statusFilter={statusFilter} />
-        <CoverageOverTimeChart dateRange={dateRange} />
-        <PolicyDistributionByRegionChart />
+        <div className="grid grid-cols-2 gap-4">
+          <PolicyholdersBasedOnRegionChart policyholders={policyholders} />
+          <PolicyCountByTypeAndStatusChart policies={policies} />
+          <CoverageOverTimeChart policies={policies} />
+          <PolicyDistributionByRegionChart policies={policies} policyholders={policyholders} />
+        </div>
       </div>
 
       {(userRole === 'policy_holder' || userRole === 'admin') && (
         <>
-            <h3 className="text-xl font-semibold mb-4">Add Policyholder</h3>
+          <h3 className="text-xl font-semibold mb-4">Add Policyholder</h3>
           <form onSubmit={handleAddPolicyholder} className="mb-6 space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <div>
@@ -255,7 +295,7 @@ export default function Dashboard() {
                 />
               </div>
               <div>
-                <label className="block mb-1">Mail <span className="text-red-500">*</span></label>
+                <label className="block mb-1">Contact <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={contact}
@@ -275,8 +315,6 @@ export default function Dashboard() {
                   <option value="">Select Region</option>
                   <option value="North">North</option>
                   <option value="South">South</option>
-                  <option value="South">East</option>
-                  <option value="South">West</option>
                 </select>
               </div>
             </div>

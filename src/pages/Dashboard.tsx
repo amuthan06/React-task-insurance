@@ -10,6 +10,11 @@ import PolicyCountByTypeAndStatusChart from '../components/PolicyCountByTypeAndS
 import CoverageOverTimeChart from '../components/CoverageOverTimeChart';
 import PolicyDistributionByRegionChart from '../components/PolicyDistributionByRegionChart';
 import { Policy } from '../features/policies/policiesSlice';
+import { Button } from '../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Input } from '../components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 
 export default function Dashboard() {
   const dispatch = useDispatch<AppDispatch>();
@@ -18,18 +23,18 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
-  const [region, setRegion] = useState('');
+  const [region, setRegion] = useState('none');
   const [policyNumber, setPolicyNumber] = useState('');
   const [policyType, setPolicyType] = useState('');
   const [coverage, setCoverage] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [status, setStatus] = useState('Active');
-  const [selectedPolicyholderId, setSelectedPolicyholderId] = useState('');
+  const [selectedPolicyholderId, setSelectedPolicyholderId] = useState('none');
   const [policyError, setPolicyError] = useState<string | null>(null);
   const [editingPolicyId, setEditingPolicyId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [regionFilter, setRegionFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('none');
+  const [regionFilter, setRegionFilter] = useState('none');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -51,7 +56,7 @@ export default function Dashboard() {
       console.log('Full user object:', user);
       const role = user.user_metadata?.role || 'policy_holder';
       console.log('Fetched user metadata:', user.user_metadata);
-      console.log('User role:', role);
+      console.log('User role set to:', role);
       setUserRole(role);
     };
 
@@ -63,21 +68,21 @@ export default function Dashboard() {
     dispatch(fetchPolicies());
   }, [dispatch]);
 
+  // Add logging for debugging
+  console.log('User Role:', userRole);
+  console.log('Policyholders Loading:', phLoading, 'Error:', phError, 'Data:', rawPolicyholders);
+  console.log('Policies Loading:', pLoading, 'Error:', pError, 'Data:', rawPolicies);
+
   // Apply filters to policyholders
-  const policyholders = regionFilter
+  const policyholders = regionFilter !== 'none'
     ? rawPolicyholders.filter((ph) => ph.region === regionFilter)
     : rawPolicyholders;
 
   // Apply filters to policies
   const policies = rawPolicies.filter((policy) => {
-    // Status Filter
-    const matchesStatus = statusFilter ? policy.status === statusFilter : true;
-
-    // Region Filter: Filter policies based on the policyholder's region
+    const matchesStatus = statusFilter !== 'none' ? policy.status === statusFilter : true;
     const policyholder = rawPolicyholders.find((ph) => ph.id === policy.policyholder_id);
-    const matchesRegion = regionFilter && policyholder ? policyholder.region === regionFilter : true;
-
-    // Date Range Filter: Policy should be active within the date range
+    const matchesRegion = regionFilter !== 'none' && policyholder ? policyholder.region === regionFilter : true;
     const matchesDateRange =
       dateRange.start && dateRange.end
         ? policy.start_date <= dateRange.end && policy.end_date >= dateRange.start
@@ -97,6 +102,10 @@ export default function Dashboard() {
     e.preventDefault();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    if (region === 'none') {
+      alert('Please select a region.');
+      return;
+    }
     const { error } = await supabase.from('policyholders').insert({
       name,
       contact,
@@ -108,7 +117,7 @@ export default function Dashboard() {
     } else {
       setName('');
       setContact('');
-      setRegion('');
+      setRegion('none');
       dispatch(fetchPolicyholders());
     }
   };
@@ -116,7 +125,7 @@ export default function Dashboard() {
   const handleAddPolicy = async (e: React.FormEvent) => {
     e.preventDefault();
     setPolicyError(null);
-    if (!selectedPolicyholderId) {
+    if (selectedPolicyholderId === 'none') {
       setPolicyError('Please select a policyholder.');
       return;
     }
@@ -138,7 +147,7 @@ export default function Dashboard() {
       setStartDate('');
       setEndDate('');
       setStatus('Active');
-      setSelectedPolicyholderId('');
+      setSelectedPolicyholderId('none');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to add policy.';
       setPolicyError(errorMessage);
@@ -161,6 +170,10 @@ export default function Dashboard() {
     e.preventDefault();
     setPolicyError(null);
     if (!editingPolicyId) return;
+    if (selectedPolicyholderId === 'none') {
+      setPolicyError('Please select a policyholder.');
+      return;
+    }
     try {
       await dispatch(
         updatePolicyThunk({
@@ -183,7 +196,7 @@ export default function Dashboard() {
       setStartDate('');
       setEndDate('');
       setStatus('Active');
-      setSelectedPolicyholderId('');
+      setSelectedPolicyholderId('none');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to update policy.';
       setPolicyError(errorMessage);
@@ -204,287 +217,325 @@ export default function Dashboard() {
   };
 
   if (!userRole) {
+    console.log('Rendering Loading state...');
     return <div>Loading...</div>;
   }
 
-  console.log('Policyholders in Dashboard:', policyholders);
-  console.log('Policies in Dashboard:', policies);
+  if (phError || pError) {
+    console.log('Rendering Error state...');
+    return (
+      <div className="p-6">
+        {phError && <p className="text-red-500">Policyholders Error: {phError}</p>}
+        {pError && <p className="text-red-500">Policies Error: {pError}</p>}
+      </div>
+    );
+  }
+
+  console.log('Rendering Main Dashboard...');
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">{userRole === 'admin' ? 'Admin Dashboard' : userRole === 'agent' ? 'Agent Dashboard' : 'Policyholders Dashboard'}</h2>
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-        >
+        <Button variant="destructive" onClick={handleLogout}>
           Logout
-        </button>
+        </Button>
       </div>
 
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-2">Filters</h3>
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          <div>
-            <label className="block mb-1">Policy Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="border p-2 w-full rounded"
-            >
-              <option value="">All Statuses</option>
-              <option value="Active">Active</option>
-              <option value="Expired">Expired</option>
-              <option value="Pending">Pending</option>
-            </select>
-          </div>
-          <div>
-            <label className="block mb-1">Region</label>
-            <select
-              value={regionFilter}
-              onChange={(e) => setRegionFilter(e.target.value)}
-              className="border p-2 w-full rounded"
-            >
-              <option value="">All Regions</option>
-              <option value="North">North</option>
-              <option value="South">South</option>
-              <option value="East">East</option>
-              <option value="West">West</option>
-            </select>
-          </div>
-          <div>
-            <label className="block mb-1">Date Range</label>
-            <div className="flex space-x-2">
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                className="border p-2 w-full rounded"
-              />
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                className="border p-2 w-full rounded"
-              />
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block mb-1 text-sm font-medium">Policy Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">All Statuses</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Expired">Expired</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block mb-1 text-sm font-medium">Region</label>
+              <Select value={regionFilter} onValueChange={setRegionFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Region" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">All Regions</SelectItem>
+                  <SelectItem value="North">North</SelectItem>
+                  <SelectItem value="South">South</SelectItem>
+                  <SelectItem value="East">East</SelectItem>
+                  <SelectItem value="West">West</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block mb-1 text-sm font-medium">Date Range</label>
+              <div className="flex space-x-2">
+                <Input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                />
+                <Input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        <div className="grid grid-cols-2 gap-4">
-          <PolicyholdersBasedOnRegionChart policyholders={policyholders} />
-          <PolicyCountByTypeAndStatusChart policies={policies} />
-          <CoverageOverTimeChart policies={policies} />
-          <PolicyDistributionByRegionChart policies={policies} policyholders={policyholders} />
-        </div>
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <Card>
+          <CardContent className="pt-6">
+            <PolicyholdersBasedOnRegionChart policyholders={policyholders} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <PolicyCountByTypeAndStatusChart policies={policies} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <CoverageOverTimeChart policies={policies} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <PolicyDistributionByRegionChart policies={policies} policyholders={policyholders} />
+          </CardContent>
+        </Card>
       </div>
 
       {(userRole === 'policy_holder' || userRole === 'admin') && (
         <>
-          <h3 className="text-xl font-semibold mb-4">Add Policyholder</h3>
-          <form onSubmit={handleAddPolicyholder} className="mb-6 space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block mb-1">Name <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="border p-2 w-full rounded"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block mb-1">Contact <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={contact}
-                  onChange={(e) => setContact(e.target.value)}
-                  className="border p-2 w-full rounded"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block mb-1">Region <span className="text-red-500">*</span></label>
-                <select
-                  value={region}
-                  onChange={(e) => setRegion(e.target.value)}
-                  className="border p-2 w-full rounded"
-                  required
-                >
-                  <option value="">Select Region</option>
-                  <option value="North">North</option>
-                  <option value="South">South</option>
-                </select>
-              </div>
-            </div>
-            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-              Add Policyholder
-            </button>
-          </form>
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Add Policyholder</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleAddPolicyholder} className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block mb-1 text-sm font-medium">Name <span className="text-red-500">*</span></label>
+                    <Input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-sm font-medium">Contact <span className="text-red-500">*</span></label>
+                    <Input
+                      type="text"
+                      value={contact}
+                      onChange={(e) => setContact(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-sm font-medium">Region <span className="text-red-500">*</span></label>
+                    <Select value={region} onValueChange={setRegion}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Region" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select Region</SelectItem>
+                        <SelectItem value="North">North</SelectItem>
+                        <SelectItem value="South">South</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button type="submit">Add Policyholder</Button>
+              </form>
+            </CardContent>
+          </Card>
 
-          <form onSubmit={editingPolicyId ? handleUpdatePolicy : handleAddPolicy} className="mb-6 space-y-4">
-            <h3 className="text-xl font-semibold mb-4">
-              {editingPolicyId ? 'Edit Policy' : 'Add Policy'}
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block mb-1">Policyholder <span className="text-red-500">*</span></label>
-                <select
-                  value={selectedPolicyholderId}
-                  onChange={(e) => setSelectedPolicyholderId(e.target.value)}
-                  className="border p-2 w-full rounded"
-                  required
-                >
-                  <option value="">Select Policyholder</option>
-                  {policyholders.map((ph) => (
-                    <option key={ph.id} value={ph.id}>
-                      {ph.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block mb-1">Policy Number <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={policyNumber}
-                  onChange={(e) => setPolicyNumber(e.target.value)}
-                  className="border p-2 w-full rounded"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block mb-1">Type <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={policyType}
-                  onChange={(e) => setPolicyType(e.target.value)}
-                  className="border p-2 w-full rounded"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block mb-1">Coverage ($) <span className="text-red-500">*</span></label>
-                <input
-                  type="number"
-                  value={coverage}
-                  onChange={(e) => setCoverage(e.target.value)}
-                  className="border p-2 w-full rounded"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block mb-1">Start Date <span className="text-red-500">*</span></label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="border p-2 w-full rounded"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block mb-1">End Date <span className="text-red-500">*</span></label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="border p-2 w-full rounded"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block mb-1">Status <span className="text-red-500">*</span></label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="border p-2 w-full rounded"
-                  required
-                >
-                  <option value="Active">Active</option>
-                  <option value="Expired">Expired</option>
-                  <option value="Pending">Pending</option>
-                </select>
-              </div>
-            </div>
-            {policyError && <p className="text-red-500">{policyError}</p>}
-            <button
-              type="submit"
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-            >
-              {editingPolicyId ? 'Update Policy' : 'Add Policy'}
-            </button>
-            {editingPolicyId && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingPolicyId(null);
-                  setPolicyNumber('');
-                  setPolicyType('');
-                  setCoverage('');
-                  setStartDate('');
-                  setEndDate('');
-                  setStatus('Active');
-                  setSelectedPolicyholderId('');
-                  setPolicyError(null);
-                }}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 ml-2"
-              >
-                Cancel
-              </button>
-            )}
-          </form>
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>{editingPolicyId ? 'Edit Policy' : 'Add Policy'}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={editingPolicyId ? handleUpdatePolicy : handleAddPolicy} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block mb-1 text-sm font-medium">Policyholder <span className="text-red-500">*</span></label>
+                    <Select value={selectedPolicyholderId} onValueChange={setSelectedPolicyholderId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Policyholder" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select Policyholder</SelectItem>
+                        {policyholders.map((ph) => (
+                          <SelectItem key={ph.id} value={ph.id}>
+                            {ph.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-sm font-medium">Policy Number <span className="text-red-500">*</span></label>
+                    <Input
+                      type="text"
+                      value={policyNumber}
+                      onChange={(e) => setPolicyNumber(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-sm font-medium">Type <span className="text-red-500">*</span></label>
+                    <Input
+                      type="text"
+                      value={policyType}
+                      onChange={(e) => setPolicyType(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-sm font-medium">Coverage ($) <span className="text-red-500">*</span></label>
+                    <Input
+                      type="number"
+                      value={coverage}
+                      onChange={(e) => setCoverage(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-sm font-medium">Start Date <span className="text-red-500">*</span></label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-sm font-medium">End Date <span className="text-red-500">*</span></label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-sm font-medium">Status <span className="text-red-500">*</span></label>
+                    <Select value={status} onValueChange={setStatus}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Expired">Expired</SelectItem>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {policyError && <p className="text-red-500">{policyError}</p>}
+                <div className="space-x-2">
+                  <Button type="submit" variant={editingPolicyId ? "default" : "secondary"}>
+                    {editingPolicyId ? 'Update Policy' : 'Add Policy'}
+                  </Button>
+                  {editingPolicyId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingPolicyId(null);
+                        setPolicyNumber('');
+                        setPolicyType('');
+                        setCoverage('');
+                        setStartDate('');
+                        setEndDate('');
+                        setStatus('Active');
+                        setSelectedPolicyholderId('none');
+                        setPolicyError(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </>
       )}
 
       {pLoading && <p className="text-gray-600">Loading policies...</p>}
-      {pError && <p className="text-red-500">Error: {pError}</p>}
+      {pError && <p className="text-red-500">Policies Error: {pError}</p>}
       {!pLoading && !pError && policies.length > 0 && (
-        <div className="overflow-x-auto">
-          <h3 className="text-xl font-semibold mb-4">Policies</h3>
-          <table className="min-w-full bg-white border border-gray-300">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="py-2 px-4 border-b text-left">Number</th>
-                <th className="py-2 px-4 border-b text-left">Type</th>
-                <th className="py-2 px-4 border-b text-left">Coverage ($)</th>
-                <th className="py-2 px-4 border-b text-left">Start Date</th>
-                <th className="py-2 px-4 border-b text-left">End Date</th>
-                <th className="py-2 px-4 border-b text-left">Status</th>
-                {userRole !== 'agent' && <th className="py-2 px-4 border-b text-left">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {policies.map((policy) => (
-                <tr key={policy.id} className="hover:bg-gray-50">
-                  <td className="py-2 px-4 border-b">{policy.number}</td>
-                  <td className="py-2 px-4 border-b">{policy.type}</td>
-                  <td className="py-2 px-4 border-b">{policy.coverage}</td>
-                  <td className="py-2 px-4 border-b">{policy.start_date}</td>
-                  <td className="py-2 px-4 border-b">{policy.end_date}</td>
-                  <td className="py-2 px-4 border-b">{policy.status}</td>
-                  {userRole !== 'agent' && (
-                    <td className="py-2 px-4 border-b">
-                      <button
-                        onClick={() => handleEditPolicy(policy)}
-                        className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeletePolicy(policy.id)}
-                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Policies</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Number</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Coverage ($)</TableHead>
+                  <TableHead>Start Date</TableHead>
+                  <TableHead>End Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  {userRole !== 'agent' && <TableHead>Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {policies.map((policy) => (
+                  <TableRow key={policy.id}>
+                    <TableCell>{policy.number}</TableCell>
+                    <TableCell>{policy.type}</TableCell>
+                    <TableCell>{policy.coverage}</TableCell>
+                    <TableCell>{policy.start_date}</TableCell>
+                    <TableCell>{policy.end_date}</TableCell>
+                    <TableCell>{policy.status}</TableCell>
+                    {userRole !== 'agent' && (
+                      <TableCell>
+                        <div className="space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditPolicy(policy)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeletePolicy(policy.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+      {!pLoading && !pError && policies.length === 0 && (
+        <p className="text-gray-600">No policies available.</p>
       )}
     </div>
   );

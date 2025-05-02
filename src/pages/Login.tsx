@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 export default function Login() {
@@ -7,16 +7,41 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (location.state?.message) {
+      setMessage(location.state.message);
+    }
+  }, [location]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setError(error.message);
-    } else {
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+
+      // Refresh the session to ensure user_metadata is up to date
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      console.log('User after login:', user); // Debug log
+
       navigate('/dashboard');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to log in.';
+      setError(errorMessage);
     }
+  };
+
+  const handleResetPassword = () => {
+    navigate('/reset-password-request');
   };
 
   return (
@@ -45,23 +70,26 @@ export default function Login() {
             />
           </div>
           {error && <p className="text-red-500">{error}</p>}
+          {message && <p className="text-green-500">{message}</p>}
           <button
             type="submit"
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full"
           >
-            Login
+            Log In
           </button>
         </form>
         <p className="mt-4 text-center">
+          <button
+            onClick={handleResetPassword}
+            className="text-blue-500 hover:underline"
+          >
+            Reset Password
+          </button>
+        </p>
+        <p className="mt-2 text-center">
           Don't have an account?{' '}
           <Link to="/signup" className="text-blue-500 hover:underline">
             Sign Up
-          </Link>
-        </p>
-        <p className="mt-2 text-center">
-          Forgot your password?{' '}
-          <Link to="/reset-password-request" className="text-blue-500 hover:underline">
-            Reset Password
           </Link>
         </p>
       </div>

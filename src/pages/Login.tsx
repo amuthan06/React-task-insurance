@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -20,10 +20,9 @@ export default function Login() {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
-      <div className="p-6 bg-white rounded shadow-md w-full max-w-md">
-        <h2 className="text-2xl mb-4 text-center">Login</h2>
-        {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="bg-white p-6 rounded shadow-md w-full max-w-md">
+        <h2 className="text-2xl font-bold mb-4 text-center">Login</h2>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block mb-1">Email</label>
@@ -45,7 +44,11 @@ export default function Login() {
               required
             />
           </div>
-          <button type="submit" className="bg-blue-500 text-white p-2 rounded w-full">
+          {error && <p className="text-red-500">{error}</p>}
+          <button
+            type="submit"
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full"
+          >
             Login
           </button>
         </form>
@@ -53,6 +56,12 @@ export default function Login() {
           Don't have an account?{' '}
           <Link to="/signup" className="text-blue-500 hover:underline">
             Sign Up
+          </Link>
+        </p>
+        <p className="mt-2 text-center">
+          Forgot your password?{' '}
+          <Link to="/reset-password-request" className="text-blue-500 hover:underline">
+            Reset Password
           </Link>
         </p>
       </div>

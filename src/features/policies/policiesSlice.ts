@@ -1,7 +1,8 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { supabase } from '../../lib/supabase';
 
-interface Policy {
+// Export the Policy interface so it can be imported in other files
+export interface Policy {
   id: string;
   number: string;
   type: string;
@@ -43,10 +44,24 @@ const policiesSlice = createSlice({
     addPolicy: (state, action: PayloadAction<Policy>) => {
       state.list.push(action.payload);
     },
+    updatePolicy: (state, action: PayloadAction<Policy>) => {
+      const index = state.list.findIndex((p) => p.id === action.payload.id);
+      if (index !== -1) state.list[index] = action.payload;
+    },
+    removePolicy: (state, action: PayloadAction<string>) => {
+      state.list = state.list.filter((p) => p.id !== action.payload);
+    },
   },
 });
 
-export const { fetchPoliciesStart, fetchPoliciesSuccess, fetchPoliciesFailure, addPolicy } = policiesSlice.actions;
+export const {
+  fetchPoliciesStart,
+  fetchPoliciesSuccess,
+  fetchPoliciesFailure,
+  addPolicy,
+  updatePolicy,
+  removePolicy,
+} = policiesSlice.actions;
 
 export const fetchPolicies = () => async (dispatch: any) => {
   dispatch(fetchPoliciesStart());
@@ -64,8 +79,6 @@ export const fetchPolicies = () => async (dispatch: any) => {
 export const createPolicy = (policy: Omit<Policy, 'id'>) => async (dispatch: any) => {
   try {
     console.log('Creating Policy with Data:', policy);
-
-    // Validate that the policyholder_id belongs to the authenticated user
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
     if (!userId) throw new Error('User not authenticated');
@@ -87,6 +100,36 @@ export const createPolicy = (policy: Omit<Policy, 'id'>) => async (dispatch: any
     if (data) dispatch(addPolicy(data[0]));
   } catch (error) {
     console.error('Create Policy Error:', error);
+    throw error;
+  }
+};
+
+export const updatePolicyThunk = (id: string, updates: Partial<Omit<Policy, 'id'>>) => async (dispatch: any) => {
+  try {
+    console.log('Updating Policy with ID:', id, 'Updates:', updates);
+    const { data, error } = await supabase
+      .from('policies')
+      .update(updates)
+      .eq('id', id)
+      .select();
+    console.log('Update Policy Response:', { data, error });
+    if (error) throw new Error(error.message);
+    if (data && data.length > 0) dispatch(updatePolicy(data[0]));
+  } catch (error) {
+    console.error('Update Policy Error:', error);
+    throw error;
+  }
+};
+
+export const deletePolicy = (id: string) => async (dispatch: any) => {
+  try {
+    console.log('Deleting Policy with ID:', id);
+    const { error } = await supabase.from('policies').delete().eq('id', id);
+    console.log('Delete Policy Response:', { error });
+    if (error) throw new Error(error.message);
+    dispatch(removePolicy(id));
+  } catch (error) {
+    console.error('Delete Policy Error:', error);
     throw error;
   }
 };

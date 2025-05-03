@@ -34,6 +34,11 @@ import { fetchPolicyholders } from '../features/policyholders/policyholdersSlice
 import { supabase } from '../lib/supabase'
 import type { AppDispatch, RootState } from '../store'
 
+interface PolicyHolderUser {
+  id: string
+  email: string
+}
+
 export default function Dashboard() {
   const dispatch = useDispatch<AppDispatch>()
   const {
@@ -65,6 +70,12 @@ export default function Dashboard() {
   const [userRole, setUserRole] = useState<
     'admin' | 'agent' | 'policy_holder' | null
   >(null)
+  const [policyHolderUsers, setPolicyHolderUsers] = useState<
+    PolicyHolderUser[]
+  >([])
+  const [selectedPolicyHolderUserId, setSelectedPolicyHolderUserId] =
+    useState('none')
+  const [fetchUsersError, setFetchUsersError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -97,9 +108,51 @@ export default function Dashboard() {
   useEffect(() => {
     dispatch(fetchPolicyholders())
     dispatch(fetchPolicies())
+
+    const fetchPolicyHolderUsers = async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_policy_holder_users')
+
+        console.log('Supabase fetchPolicyHolderUsers data:', data)
+        console.log('Supabase fetchPolicyHolderUsers error:', error)
+
+        if (error) {
+          console.error('Error fetching policy_holder users:', error)
+          setFetchUsersError(
+            error.message || 'Failed to fetch policyholder users'
+          )
+          setPolicyHolderUsers([])
+          return
+        }
+
+        if (!data) {
+          console.warn('No data returned from get_policy_holder_users')
+          setPolicyHolderUsers([])
+          return
+        }
+
+        const users = Array.isArray(data)
+          ? data.map((user: { id: string; email: string }) => {
+              console.log('Mapping user:', user)
+              return {
+                id: user.id,
+                email: user.email || 'No email',
+              }
+            })
+          : []
+        console.log('Mapped policyHolderUsers:', users)
+        setPolicyHolderUsers(users)
+        setFetchUsersError(null)
+      } catch (err) {
+        console.error('Unexpected error in fetchPolicyHolderUsers:', err)
+        setFetchUsersError('Unexpected error while fetching policyholder users')
+        setPolicyHolderUsers([])
+      }
+    }
+
+    fetchPolicyHolderUsers()
   }, [dispatch])
 
-  // Add logging for debugging
   console.log('User Role:', userRole)
   console.log(
     'Policyholders Loading:',
@@ -117,14 +170,13 @@ export default function Dashboard() {
     'Data:',
     rawPolicies
   )
+  console.log('Policy Holder Users:', policyHolderUsers)
 
-  // Apply filters to policyholders (RLS will already restrict data at the DB level)
   const policyholders =
     regionFilter !== 'none'
       ? rawPolicyholders.filter((ph) => ph.region === regionFilter)
       : rawPolicyholders
 
-  // Apply filters to policies (RLS will already restrict data at the DB level)
   const policies = rawPolicies.filter((policy) => {
     const matchesStatus =
       statusFilter !== 'none' ? policy.status === statusFilter : true
@@ -153,21 +205,19 @@ export default function Dashboard() {
 
   const handleAddPolicyholder = async (e: React.FormEvent) => {
     e.preventDefault()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) {
-      return
-    }
     if (region === 'none') {
       alert('Please select a region.')
+      return
+    }
+    if (selectedPolicyHolderUserId === 'none') {
+      alert('Please select a policyholder to associate with.')
       return
     }
     const { error } = await supabase.from('policyholders').insert({
       name,
       contact,
       region,
-      user_id: user.id,
+      user_id: selectedPolicyHolderUserId,
     })
     if (error) {
       console.error(error)
@@ -175,6 +225,7 @@ export default function Dashboard() {
       setName('')
       setContact('')
       setRegion('none')
+      setSelectedPolicyHolderUserId('none')
       dispatch(fetchPolicyholders())
     }
   }
@@ -237,18 +288,13 @@ export default function Dashboard() {
     try {
       const updatedFields: Partial<Policy> = {}
 
-      // For policy_holder, only allow updates to coverage, start_date, end_date
       if (userRole === 'policy_holder') {
         updatedFields.coverage = Number.parseInt(coverage)
         updatedFields.start_date = startDate
         updatedFields.end_date = endDate
-      }
-      // For agent, only allow updates to status
-      else if (userRole === 'agent') {
+      } else if (userRole === 'agent') {
         updatedFields.status = status
-      }
-      // For admin, allow all fields
-      else if (userRole === 'admin') {
+      } else if (userRole === 'admin') {
         updatedFields.number = policyNumber
         updatedFields.type = policyType
         updatedFields.coverage = Number.parseInt(coverage)
@@ -312,14 +358,10 @@ export default function Dashboard() {
 
   console.log('Rendering Main Dashboard...')
 
-  // Helper to check if user can add policies (admin and agent)
   const canAddPolicies = userRole === 'admin' || userRole === 'agent'
-  // Helper to check if user can edit limited fields (coverage, start_date, end_date)
   const _canEditLimitedFields =
     userRole === 'admin' || userRole === 'policy_holder'
-  // Helper to check if user can edit status
   const _canEditStatus = userRole === 'admin' || userRole === 'agent'
-  // Helper to determine if the form should be rendered
   const shouldRenderForm =
     canAddPolicies || (userRole === 'policy_holder' && editingPolicyId)
 
@@ -450,6 +492,9 @@ export default function Dashboard() {
             <CardTitle>Add Policyholder</CardTitle>
           </CardHeader>
           <CardContent>
+            {fetchUsersError && (
+              <p className="text-red-500 mb-4">{fetchUsersError}</p>
+            )}
             <form onSubmit={handleAddPolicyholder} className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div>
@@ -500,6 +545,35 @@ export default function Dashboard() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <label
+                    htmlFor="policyholder-under"
+                    className="block mb-1 text-sm font-medium"
+                  >
+                    Policyholder Under <span className="text-red-500">*</span>
+                  </label>
+                  <Select
+                    value={selectedPolicyHolderUserId}
+                    onValueChange={setSelectedPolicyHolderUserId}
+                  >
+                    <SelectTrigger id="policyholder-under">
+                      <SelectValue placeholder="Select Policyholder" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select Policyholder</SelectItem>
+                      {policyHolderUsers.length === 0 && (
+                        <SelectItem value="none" disabled>
+                          No policyholders available
+                        </SelectItem>
+                      )}
+                      {policyHolderUsers.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <Button type="submit">Add Policyholder</Button>
             </form>
@@ -520,7 +594,6 @@ export default function Dashboard() {
               className="space-y-4"
             >
               <div className="grid grid-cols-2 gap-4">
-                {/* Always show policyholder, number, and type fields */}
                 <div>
                   <label
                     htmlFor="policyholder"
@@ -534,7 +607,7 @@ export default function Dashboard() {
                     disabled={
                       editingPolicyId &&
                       (userRole === 'agent' || userRole === 'policy_holder')
-                    } // Disable for agents and policy holders when editing
+                    }
                   >
                     <SelectTrigger id="policyholder">
                       <SelectValue placeholder="Select Policyholder" />
@@ -565,7 +638,7 @@ export default function Dashboard() {
                     disabled={
                       editingPolicyId &&
                       (userRole === 'agent' || userRole === 'policy_holder')
-                    } // Disable for agents and policy holders when editing
+                    }
                   />
                 </div>
                 <div>
@@ -584,10 +657,9 @@ export default function Dashboard() {
                     disabled={
                       editingPolicyId &&
                       (userRole === 'agent' || userRole === 'policy_holder')
-                    } // Disable for agents and policy holders when editing
+                    }
                   />
                 </div>
-                {/* Coverage field */}
                 <div>
                   <label
                     htmlFor="coverage"
@@ -601,10 +673,9 @@ export default function Dashboard() {
                     value={coverage}
                     onChange={(e) => setCoverage(e.target.value)}
                     required
-                    disabled={editingPolicyId && userRole === 'agent'} // Only disable for agents when editing
+                    disabled={editingPolicyId && userRole === 'agent'}
                   />
                 </div>
-                {/* Start date field */}
                 <div>
                   <label
                     htmlFor="start-date"
@@ -621,10 +692,9 @@ export default function Dashboard() {
                     disabled={
                       editingPolicyId &&
                       (userRole === 'agent' || userRole === 'policy_holder')
-                    } // Disable for agents and policy holders when editing
+                    }
                   />
                 </div>
-                {/* End date field */}
                 <div>
                   <label
                     htmlFor="end-date"
@@ -638,10 +708,9 @@ export default function Dashboard() {
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     required
-                    disabled={editingPolicyId && userRole === 'agent'} // Only disable for agents when editing
+                    disabled={editingPolicyId && userRole === 'agent'}
                   />
                 </div>
-                {/* Status field */}
                 <div>
                   <label
                     htmlFor="status"
@@ -652,7 +721,7 @@ export default function Dashboard() {
                   <Select
                     value={status}
                     onValueChange={setStatus}
-                    disabled={editingPolicyId && userRole === 'policy_holder'} // Disable for policy holders when editing
+                    disabled={editingPolicyId && userRole === 'policy_holder'}
                   >
                     <SelectTrigger id="status">
                       <SelectValue placeholder="Select Status" />
@@ -667,10 +736,7 @@ export default function Dashboard() {
               </div>
               {policyError && <p className="text-red-500">{policyError}</p>}
               <div className="space-x-2">
-                <Button
-                  type="submit"
-                  variant={editingPolicyId ? 'default' : 'secondary'}
-                >
+                <Button type="submit" variant="default">
                   {editingPolicyId ? 'Update Policy' : 'Add Policy'}
                 </Button>
                 {editingPolicyId && (

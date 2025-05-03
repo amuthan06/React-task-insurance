@@ -62,7 +62,9 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState('none')
   const [regionFilter, setRegionFilter] = useState('none')
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
-  const [userRole, setUserRole] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<
+    'admin' | 'agent' | 'policy_holder' | null
+  >(null)
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -86,7 +88,7 @@ export default function Dashboard() {
       const role = user.user_metadata?.role || 'policy_holder'
       console.log('Fetched user metadata:', user.user_metadata)
       console.log('User role set to:', role)
-      setUserRole(role)
+      setUserRole(role as 'admin' | 'agent' | 'policy_holder')
     }
 
     fetchUserRole()
@@ -116,13 +118,13 @@ export default function Dashboard() {
     rawPolicies
   )
 
-  // Apply filters to policyholders
+  // Apply filters to policyholders (RLS will already restrict data at the DB level)
   const policyholders =
     regionFilter !== 'none'
       ? rawPolicyholders.filter((ph) => ph.region === regionFilter)
       : rawPolicyholders
 
-  // Apply filters to policies
+  // Apply filters to policies (RLS will already restrict data at the DB level)
   const policies = rawPolicies.filter((policy) => {
     const matchesStatus =
       statusFilter !== 'none' ? policy.status === statusFilter : true
@@ -228,23 +230,38 @@ export default function Dashboard() {
     if (!editingPolicyId) {
       return
     }
-    if (selectedPolicyholderId === 'none') {
+    if (selectedPolicyholderId === 'none' && userRole === 'admin') {
       setPolicyError('Please select a policyholder.')
       return
     }
     try {
+      const updatedFields: Partial<Policy> = {}
+
+      // For policy_holder, only allow updates to coverage, start_date, end_date
+      if (userRole === 'policy_holder') {
+        updatedFields.coverage = Number.parseInt(coverage)
+        updatedFields.start_date = startDate
+        updatedFields.end_date = endDate
+      }
+      // For agent, only allow updates to status
+      else if (userRole === 'agent') {
+        updatedFields.status = status
+      }
+      // For admin, allow all fields
+      else if (userRole === 'admin') {
+        updatedFields.number = policyNumber
+        updatedFields.type = policyType
+        updatedFields.coverage = Number.parseInt(coverage)
+        updatedFields.start_date = startDate
+        updatedFields.end_date = endDate
+        updatedFields.status = status
+        updatedFields.policyholder_id = selectedPolicyholderId
+      }
+
       await dispatch(
         updatePolicyThunk({
           id: editingPolicyId,
-          policy: {
-            number: policyNumber,
-            type: policyType,
-            coverage: Number.parseInt(coverage),
-            start_date: startDate,
-            end_date: endDate,
-            status,
-            policyholder_id: selectedPolicyholderId,
-          },
+          policy: updatedFields as Omit<Policy, 'id'>,
         })
       )
       setEditingPolicyId(null)
@@ -294,6 +311,17 @@ export default function Dashboard() {
   }
 
   console.log('Rendering Main Dashboard...')
+
+  // Helper to check if user can add policies (admin and agent)
+  const canAddPolicies = userRole === 'admin' || userRole === 'agent'
+  // Helper to check if user can edit limited fields (coverage, start_date, end_date)
+  const _canEditLimitedFields =
+    userRole === 'admin' || userRole === 'policy_holder'
+  // Helper to check if user can edit status
+  const _canEditStatus = userRole === 'admin' || userRole === 'agent'
+  // Helper to determine if the form should be rendered
+  const shouldRenderForm =
+    canAddPolicies || (userRole === 'policy_holder' && editingPolicyId)
 
   return (
     <div className="p-6">
@@ -416,235 +444,258 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {(userRole === 'policy_holder' || userRole === 'admin') && (
-        <>
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Add Policyholder</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAddPolicyholder} className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label
-                      htmlFor="name"
-                      className="block mb-1 text-sm font-medium"
-                    >
-                      Name <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      id="name"
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="contact"
-                      className="block mb-1 text-sm font-medium"
-                    >
-                      Contact <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      id="contact"
-                      type="text"
-                      value={contact}
-                      onChange={(e) => setContact(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="region"
-                      className="block mb-1 text-sm font-medium"
-                    >
-                      Region <span className="text-red-500">*</span>
-                    </label>
-                    <Select value={region} onValueChange={setRegion}>
-                      <SelectTrigger id="region">
-                        <SelectValue placeholder="Select Region" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Select Region</SelectItem>
-                        <SelectItem value="North">North</SelectItem>
-                        <SelectItem value="South">South</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <Button type="submit">Add Policyholder</Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>
-                {editingPolicyId ? 'Edit Policy' : 'Add Policy'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form
-                onSubmit={
-                  editingPolicyId ? handleUpdatePolicy : handleAddPolicy
-                }
-                className="space-y-4"
-              >
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label
-                      htmlFor="policyholder"
-                      className="block mb-1 text-sm font-medium"
-                    >
-                      Policyholder <span className="text-red-500">*</span>
-                    </label>
-                    <Select
-                      value={selectedPolicyholderId}
-                      onValueChange={setSelectedPolicyholderId}
-                    >
-                      <SelectTrigger id="policyholder">
-                        <SelectValue placeholder="Select Policyholder" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">
-                          Select Policyholder
-                        </SelectItem>
-                        {policyholders.map((ph) => (
-                          <SelectItem key={ph.id} value={ph.id}>
-                            {ph.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="policy-number"
-                      className="block mb-1 text-sm font-medium"
-                    >
-                      Policy Number <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      id="policy-number"
-                      type="text"
-                      value={policyNumber}
-                      onChange={(e) => setPolicyNumber(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="policy-type"
-                      className="block mb-1 text-sm font-medium"
-                    >
-                      Type <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      id="policy-type"
-                      type="text"
-                      value={policyType}
-                      onChange={(e) => setPolicyType(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="coverage"
-                      className="block mb-1 text-sm font-medium"
-                    >
-                      Coverage ($) <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      id="coverage"
-                      type="number"
-                      value={coverage}
-                      onChange={(e) => setCoverage(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="start-date"
-                      className="block mb-1 text-sm font-medium"
-                    >
-                      Start Date <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      id="start-date"
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="end-date"
-                      className="block mb-1 text-sm font-medium"
-                    >
-                      End Date <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      id="end-date"
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="status"
-                      className="block mb-1 text-sm font-medium"
-                    >
-                      Status <span className="text-red-500">*</span>
-                    </label>
-                    <Select value={status} onValueChange={setStatus}>
-                      <SelectTrigger id="status">
-                        <SelectValue placeholder="Select Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Expired">Expired</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                {policyError && <p className="text-red-500">{policyError}</p>}
-                <div className="space-x-2">
-                  <Button
-                    type="submit"
-                    variant={editingPolicyId ? 'default' : 'secondary'}
+      {userRole === 'admin' && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Add Policyholder</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAddPolicyholder} className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="block mb-1 text-sm font-medium"
                   >
-                    {editingPolicyId ? 'Update Policy' : 'Add Policy'}
-                  </Button>
-                  {editingPolicyId && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setEditingPolicyId(null)
-                        setPolicyNumber('')
-                        setPolicyType('')
-                        setCoverage('')
-                        setStartDate('')
-                        setEndDate('')
-                        setStatus('Active')
-                        setSelectedPolicyholderId('none')
-                        setPolicyError(null)
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  )}
+                    Name <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
                 </div>
-              </form>
-            </CardContent>
-          </Card>
-        </>
+                <div>
+                  <label
+                    htmlFor="contact"
+                    className="block mb-1 text-sm font-medium"
+                  >
+                    Contact <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    id="contact"
+                    type="text"
+                    value={contact}
+                    onChange={(e) => setContact(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="region"
+                    className="block mb-1 text-sm font-medium"
+                  >
+                    Region <span className="text-red-500">*</span>
+                  </label>
+                  <Select value={region} onValueChange={setRegion}>
+                    <SelectTrigger id="region">
+                      <SelectValue placeholder="Select Region" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select Region</SelectItem>
+                      <SelectItem value="North">North</SelectItem>
+                      <SelectItem value="South">South</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button type="submit">Add Policyholder</Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {shouldRenderForm && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>
+              {editingPolicyId ? 'Edit Policy' : 'Add Policy'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form
+              onSubmit={editingPolicyId ? handleUpdatePolicy : handleAddPolicy}
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                {/* Always show policyholder, number, and type fields */}
+                <div>
+                  <label
+                    htmlFor="policyholder"
+                    className="block mb-1 text-sm font-medium"
+                  >
+                    Policyholder <span className="text-red-500">*</span>
+                  </label>
+                  <Select
+                    value={selectedPolicyholderId}
+                    onValueChange={setSelectedPolicyholderId}
+                    disabled={
+                      editingPolicyId &&
+                      (userRole === 'agent' || userRole === 'policy_holder')
+                    } // Disable for agents and policy holders when editing
+                  >
+                    <SelectTrigger id="policyholder">
+                      <SelectValue placeholder="Select Policyholder" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select Policyholder</SelectItem>
+                      {policyholders.map((ph) => (
+                        <SelectItem key={ph.id} value={ph.id}>
+                          {ph.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="policy-number"
+                    className="block mb-1 text-sm font-medium"
+                  >
+                    Policy Number <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    id="policy-number"
+                    type="text"
+                    value={policyNumber}
+                    onChange={(e) => setPolicyNumber(e.target.value)}
+                    required
+                    disabled={
+                      editingPolicyId &&
+                      (userRole === 'agent' || userRole === 'policy_holder')
+                    } // Disable for agents and policy holders when editing
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="policy-type"
+                    className="block mb-1 text-sm font-medium"
+                  >
+                    Type <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    id="policy-type"
+                    type="text"
+                    value={policyType}
+                    onChange={(e) => setPolicyType(e.target.value)}
+                    required
+                    disabled={
+                      editingPolicyId &&
+                      (userRole === 'agent' || userRole === 'policy_holder')
+                    } // Disable for agents and policy holders when editing
+                  />
+                </div>
+                {/* Coverage field */}
+                <div>
+                  <label
+                    htmlFor="coverage"
+                    className="block mb-1 text-sm font-medium"
+                  >
+                    Coverage ($) <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    id="coverage"
+                    type="number"
+                    value={coverage}
+                    onChange={(e) => setCoverage(e.target.value)}
+                    required
+                    disabled={editingPolicyId && userRole === 'agent'} // Only disable for agents when editing
+                  />
+                </div>
+                {/* Start date field */}
+                <div>
+                  <label
+                    htmlFor="start-date"
+                    className="block mb-1 text-sm font-medium"
+                  >
+                    Start Date <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    required
+                    disabled={
+                      editingPolicyId &&
+                      (userRole === 'agent' || userRole === 'policy_holder')
+                    } // Disable for agents and policy holders when editing
+                  />
+                </div>
+                {/* End date field */}
+                <div>
+                  <label
+                    htmlFor="end-date"
+                    className="block mb-1 text-sm font-medium"
+                  >
+                    End Date <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    required
+                    disabled={editingPolicyId && userRole === 'agent'} // Only disable for agents when editing
+                  />
+                </div>
+                {/* Status field */}
+                <div>
+                  <label
+                    htmlFor="status"
+                    className="block mb-1 text-sm font-medium"
+                  >
+                    Status <span className="text-red-500">*</span>
+                  </label>
+                  <Select
+                    value={status}
+                    onValueChange={setStatus}
+                    disabled={editingPolicyId && userRole === 'policy_holder'} // Disable for policy holders when editing
+                  >
+                    <SelectTrigger id="status">
+                      <SelectValue placeholder="Select Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Expired">Expired</SelectItem>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {policyError && <p className="text-red-500">{policyError}</p>}
+              <div className="space-x-2">
+                <Button
+                  type="submit"
+                  variant={editingPolicyId ? 'default' : 'secondary'}
+                >
+                  {editingPolicyId ? 'Update Policy' : 'Add Policy'}
+                </Button>
+                {editingPolicyId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingPolicyId(null)
+                      setPolicyNumber('')
+                      setPolicyType('')
+                      setCoverage('')
+                      setStartDate('')
+                      setEndDate('')
+                      setStatus('Active')
+                      setSelectedPolicyholderId('none')
+                      setPolicyError(null)
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
       {pLoading && <p className="text-gray-600">Loading policies...</p>}
@@ -664,7 +715,9 @@ export default function Dashboard() {
                   <TableHead>Start Date</TableHead>
                   <TableHead>End Date</TableHead>
                   <TableHead>Status</TableHead>
-                  {userRole !== 'agent' && <TableHead>Actions</TableHead>}
+                  {(userRole === 'admin' ||
+                    userRole === 'policy_holder' ||
+                    userRole === 'agent') && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -676,23 +729,31 @@ export default function Dashboard() {
                     <TableCell>{policy.start_date}</TableCell>
                     <TableCell>{policy.end_date}</TableCell>
                     <TableCell>{policy.status}</TableCell>
-                    {userRole !== 'agent' && (
+                    {(userRole === 'admin' ||
+                      userRole === 'policy_holder' ||
+                      userRole === 'agent') && (
                       <TableCell>
                         <div className="space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditPolicy(policy)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeletePolicy(policy.id)}
-                          >
-                            Delete
-                          </Button>
+                          {(userRole === 'admin' ||
+                            userRole === 'policy_holder' ||
+                            userRole === 'agent') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditPolicy(policy)}
+                            >
+                              Edit
+                            </Button>
+                          )}
+                          {userRole === 'admin' && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeletePolicy(policy.id)}
+                            >
+                              Delete
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     )}

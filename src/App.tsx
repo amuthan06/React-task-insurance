@@ -12,6 +12,7 @@ import Login from './pages/Login'
 import ResetPassword from './pages/ResetPassword'
 import ResetPasswordRequest from './pages/ResetPasswordRequest'
 import Signup from './pages/Signup'
+import Policy from './pages/Policy'
 
 export default function App() {
   const _dispatch = useDispatch()
@@ -30,7 +31,7 @@ export default function App() {
     return () => {
       subscription.unsubscribe()
     }
-  }, []) // Removed 'dispatch' from dependencies since it's not used in the effect
+  }, [])
 
   return (
     <Router>
@@ -42,6 +43,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/policy"
+          element={
+            <ProtectedRoute>
+              <Policy />
             </ProtectedRoute>
           }
         />

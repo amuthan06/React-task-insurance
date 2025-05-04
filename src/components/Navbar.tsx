@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useDispatch } from 'react-redux'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { supabase } from '../lib/supabase'
-import { useDispatch } from 'react-redux'
 
 export default function Navbar() {
   const location = useLocation()

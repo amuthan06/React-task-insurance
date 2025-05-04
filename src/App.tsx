@@ -9,10 +9,10 @@ import {
 import { supabase } from './lib/supabase'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
+import Policy from './pages/Policy'
 import ResetPassword from './pages/ResetPassword'
 import ResetPasswordRequest from './pages/ResetPasswordRequest'
 import Signup from './pages/Signup'
-import Policy from './pages/Policy'
 
 export default function App() {
   const _dispatch = useDispatch()

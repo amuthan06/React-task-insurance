@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import CoverageOverTimeChart from '../components/CoverageOverTimeChart'
+import Navbar from '../components/Navbar'
 import PolicyCountByTypeAndStatusChart from '../components/PolicyCountByTypeAndStatusChart'
 import PolicyDistributionByRegionChart from '../components/PolicyDistributionByRegionChart'
 import PolicyholdersBasedOnRegionChart from '../components/PolicyholdersBasedOnRegionChart'
@@ -14,11 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select'
-import { fetchPolicyholders } from '../features/policyholders/policyholdersSlice'
 import { fetchPolicies } from '../features/policies/policiesSlice'
+import { fetchPolicyholders } from '../features/policyholders/policyholdersSlice'
 import { supabase } from '../lib/supabase'
 import type { AppDispatch, RootState } from '../store'
-import Navbar from '../components/Navbar'
 
 export default function Dashboard() {
   const dispatch = useDispatch<AppDispatch>()
@@ -32,7 +32,7 @@ export default function Dashboard() {
     loading: pLoading,
     error: pError,
   } = useSelector((state: RootState) => state.policies)
-  const navigate = useNavigate()
+  const _navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('none')
   const [regionFilter, setRegionFilter] = useState('none')
   const [dateRange, setDateRange] = useState({ start: '', end: '' })

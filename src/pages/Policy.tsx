@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
+import Navbar from '../components/Navbar'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
@@ -29,7 +30,6 @@ import type { Policy } from '../features/policies/policiesSlice'
 import { fetchPolicyholders } from '../features/policyholders/policyholdersSlice'
 import { supabase } from '../lib/supabase'
 import type { AppDispatch, RootState } from '../store'
-import Navbar from '../components/Navbar'
 
 interface PolicyHolderUser {
   id: string
@@ -142,7 +142,9 @@ export default function Policy() {
           setFetchUsersError(null)
         } catch (err) {
           console.error('Unexpected error in fetchPolicyHolderUsers:', err)
-          setFetchUsersError('Unexpected error while fetching policyholder users')
+          setFetchUsersError(
+            'Unexpected error while fetching policyholder users'
+          )
           setPolicyHolderUsers([])
         }
       }
@@ -339,9 +341,9 @@ export default function Policy() {
   console.log('Rendering Policy Page...')
 
   const canAddPolicies = userRole === 'admin' || userRole === 'agent'
-  const canEditLimitedFields =
+  const _canEditLimitedFields =
     userRole === 'admin' || userRole === 'policy_holder'
-  const canEditStatus = userRole === 'admin' || userRole === 'agent'
+  const _canEditStatus = userRole === 'admin' || userRole === 'agent'
   const shouldRenderForm =
     canAddPolicies || (userRole === 'policy_holder' && editingPolicyId)
 
@@ -429,7 +431,9 @@ export default function Policy() {
                         <SelectValue placeholder="Select Policyholder" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Select Policyholder</SelectItem>
+                        <SelectItem value="none">
+                          Select Policyholder
+                        </SelectItem>
                         {policyHolderUsers.length === 0 && (
                           <SelectItem value="none" disabled>
                             No policyholders available
@@ -459,7 +463,9 @@ export default function Policy() {
             </CardHeader>
             <CardContent>
               <form
-                onSubmit={editingPolicyId ? handleUpdatePolicy : handleAddPolicy}
+                onSubmit={
+                  editingPolicyId ? handleUpdatePolicy : handleAddPolicy
+                }
                 className="space-y-4"
               >
                 <div className="grid grid-cols-2 gap-4">
@@ -482,7 +488,9 @@ export default function Policy() {
                         <SelectValue placeholder="Select Policyholder" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Select Policyholder</SelectItem>
+                        <SelectItem value="none">
+                          Select Policyholder
+                        </SelectItem>
                         {policyholders.map((ph) => (
                           <SelectItem key={ph.id} value={ph.id}>
                             {ph.name}
@@ -680,7 +688,7 @@ export default function Policy() {
                                 Edit
                               </Button>
                             )}
-                            {userRole === "admin" && (
+                            {userRole === 'admin' && (
                               <Button
                                 variant="destructive"
                                 size="sm"
@@ -700,7 +708,9 @@ export default function Policy() {
           </Card>
         )}
         {!pLoading && !pError && policies.length === 0 && (
-          <p className="text-gray-600">No policies available yet. Add a policy to get started.</p>
+          <p className="text-gray-600">
+            No policies available yet. Add a policy to get started.
+          </p>
         )}
       </div>
     </div>

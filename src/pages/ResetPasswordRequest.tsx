@@ -15,7 +15,7 @@ export default function ResetPasswordRequest() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'http://localhost:5173/reset-password',
+        redirectTo: 'https://insurance-cca.pages.dev/reset-password',
       })
       if (error) {
         throw error
